@@ -1,26 +1,23 @@
 <template>
-  <div class="flex bg-gray-25 overflow-x-auto">
+  <div class="flex bg-gray-25">
     <div class="flex flex-1 flex-col">
       <!-- Page Header (Title, Buttons, etc) -->
-      <PageHeader
-        v-if="showHeader"
-        :title="title"
-        :border="false"
-        :searchborder="searchborder"
-      >
-        <template #left>
-          <slot name="header-left" />
-        </template>
+      <PageHeader :title="title" :border="false" :searchborder="searchborder">
         <slot name="header" />
       </PageHeader>
 
-      <!-- Common Form -->
+      <!-- Invoice Form -->
       <div
-        class="flex flex-col self-center h-full overflow-auto bg-white"
-        :class="
-          useFullWidth
-            ? 'w-full border-t'
-            : 'w-form border rounded-lg shadow-lg mb-4 mx-4'
+        class="
+          border
+          rounded-lg
+          shadow-lg
+          flex flex-col
+          self-center
+          w-form
+          h-full
+          mb-4
+          bg-white
         "
       >
         <slot name="body" />
@@ -31,17 +28,13 @@
     <slot name="quickedit" />
   </div>
 </template>
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script>
 import PageHeader from './PageHeader.vue';
-
-export default defineComponent({
+export default {
   components: { PageHeader },
   props: {
     title: { type: String, default: '' },
-    useFullWidth: { type: Boolean, default: false },
-    showHeader: { type: Boolean, default: true },
     searchborder: { type: Boolean, default: true },
   },
-});
+};
 </script>

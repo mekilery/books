@@ -5,25 +5,26 @@ import { Verb } from 'fyo/telemetry/types';
 import { DEFAULT_USER } from 'fyo/utils/consts';
 import { ConflictError, MandatoryError, NotFoundError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
+import { Money } from 'pesa';
 import {
   DynamicLinkField,
   Field,
   FieldTypeEnum,
+  OptionField,
   RawValue,
   Schema,
-  TargetField,
+  TargetField
 } from 'schemas/types';
 import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
-import { markRaw, reactive } from 'vue';
+import { markRaw } from 'vue';
 import { isPesa } from '../utils/index';
 import { getDbSyncError } from './errorHelpers';
 import {
   areDocValuesEqual,
-  getFormulaSequence,
   getMissingMandatoryMessage,
   getPreDefaultValues,
   setChildDocIdx,
-  shouldApplyFormula,
+  shouldApplyFormula
 } from './helpers';
 import { setName } from './naming';
 import {
@@ -36,17 +37,16 @@ import {
   FormulaMap,
   FormulaReturn,
   HiddenMap,
-  ListViewSettings,
   ListsMap,
+  ListViewSettings,
   ReadOnlyMap,
   RequiredMap,
   TreeViewSettings,
-  ValidationMap,
+  ValidationMap
 } from './types';
 import { validateOptions, validateRequired } from './validationFunction';
 
 export class Doc extends Observable<DocValue | Doc[]> {
-  /* eslint-disable @typescript-eslint/no-floating-promises */
   name?: string;
   schema: Readonly<Schema>;
   fyo: Fyo;
@@ -62,15 +62,15 @@ export class Doc extends Observable<DocValue | Doc[]> {
   parentSchemaName?: string;
 
   links?: Record<string, Doc>;
-  _dirty = true;
-  _notInserted = true;
+  _dirty: boolean = true;
+  _notInserted: boolean = true;
 
   _syncing = false;
   constructor(
     schema: Schema,
     data: DocValueMap,
     fyo: Fyo,
-    convertToDocValue = true
+    convertToDocValue: boolean = true
   ) {
     super();
     this.fyo = markRaw(fyo);
@@ -83,7 +83,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
     this._setDefaults();
     this._setValuesWithoutChecks(data, convertToDocValue);
-    return reactive(this) as Doc;
   }
 
   get schemaName(): string {
@@ -130,7 +129,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return !!this.submitted && !!this.cancelled;
   }
 
-  get isSyncing() {
+  get syncing() {
     return this._syncing;
   }
 
@@ -140,10 +139,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
 
     if (this.schema.isSingle) {
-      return false;
-    }
-
-    if (this.schema.isChild) {
       return false;
     }
 
@@ -162,105 +157,15 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return false;
   }
 
-  get canEdit() {
-    if (!this.schema.isSubmittable) {
-      return true;
-    }
-
-    if (this.submitted) {
-      return false;
-    }
-
-    if (this.cancelled) {
-      return false;
-    }
-
-    return true;
-  }
-
-  get canSave() {
-    const isSubmittable = this.schema.isSubmittable;
-    if (isSubmittable && !!this.submitted) {
-      return false;
-    }
-
-    if (isSubmittable && !!this.cancelled) {
-      return false;
-    }
-
-    if (!this.dirty) {
-      return false;
-    }
-
-    if (this.schema.isChild) {
-      return false;
-    }
-
-    return true;
-  }
-
-  get canSubmit() {
-    if (!this.schema.isSubmittable) {
-      return false;
-    }
-
-    if (this.dirty) {
-      return false;
-    }
-
-    if (this.notInserted) {
-      return false;
-    }
-
-    if (!!this.submitted) {
-      return false;
-    }
-
-    if (!!this.cancelled) {
-      return false;
-    }
-
-    return true;
-  }
-
-  get canCancel() {
-    if (!this.schema.isSubmittable) {
-      return false;
-    }
-
-    if (this.dirty) {
-      return false;
-    }
-
-    if (this.notInserted) {
-      return false;
-    }
-
-    if (!!this.cancelled) {
-      return false;
-    }
-
-    if (!this.submitted) {
-      return false;
-    }
-
-    return true;
-  }
-
   _setValuesWithoutChecks(data: DocValueMap, convertToDocValue: boolean) {
     for (const field of this.schema.fields) {
-      const { fieldname, fieldtype } = field;
+      const fieldname = field.fieldname;
       const value = data[field.fieldname];
 
       if (Array.isArray(value)) {
         for (const row of value) {
-          this.push(fieldname, row, convertToDocValue);
+          this.push(fieldname, row);
         }
-      } else if (
-        fieldtype === FieldTypeEnum.Currency &&
-        typeof value === 'number'
-      ) {
-        this[fieldname] = this.fyo.pesa(value);
       } else if (value !== undefined && !convertToDocValue) {
         this[fieldname] = value;
       } else if (value !== undefined) {
@@ -290,10 +195,10 @@ export class Doc extends Observable<DocValue | Doc[]> {
   async set(
     fieldname: string | DocValueMap,
     value?: DocValue | Doc[] | DocValueMap[],
-    retriggerChildDocApplyChange = false
+    retriggerChildDocApplyChange: boolean = false
   ): Promise<boolean> {
     if (typeof fieldname === 'object') {
-      return await this.setMultiple(fieldname);
+      return await this.setMultiple(fieldname as DocValueMap);
     }
 
     if (!this._canSet(fieldname, value)) {
@@ -364,13 +269,13 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _applyChange(
-    changedFieldname: string,
+    fieldname: string,
     retriggerChildDocApplyChange?: boolean
   ): Promise<boolean> {
-    await this._applyFormula(changedFieldname, retriggerChildDocApplyChange);
+    await this._applyFormula(fieldname, retriggerChildDocApplyChange);
     await this.trigger('change', {
       doc: this,
-      changed: changedFieldname,
+      changed: fieldname,
     });
 
     return true;
@@ -392,7 +297,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       }
 
       if (field.fieldtype === FieldTypeEnum.Currency && !isPesa(defaultValue)) {
-        defaultValue = this.fyo.pesa(defaultValue as string | number);
+        defaultValue = this.fyo.pesa!(defaultValue as string | number);
       }
 
       this[field.fieldname] = defaultValue;
@@ -416,14 +321,10 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return await this._applyChange(fieldname);
   }
 
-  push(
-    fieldname: string,
-    docValueMap: Doc | DocValueMap | RawValueMap = {},
-    convertToDocValue = false
-  ) {
+  push(fieldname: string, docValueMap: Doc | DocValueMap = {}) {
     const childDocs = [
       (this[fieldname] ?? []) as Doc[],
-      this._getChildDoc(docValueMap, fieldname, convertToDocValue),
+      this._getChildDoc(docValueMap, fieldname),
     ].flat();
 
     setChildDocIdx(childDocs);
@@ -447,13 +348,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
   }
 
-  _getChildDoc(
-    docValueMap: Doc | DocValueMap | RawValueMap,
-    fieldname: string,
-    convertToDocValue = false
-  ): Doc {
+  _getChildDoc(docValueMap: Doc | DocValueMap, fieldname: string): Doc {
     if (!this.name && this.schema.naming !== 'manual') {
-      this.name = this.fyo.doc.getTemporaryName(this.schema);
+      this.name = getRandomString();
     }
 
     docValueMap.name ??= getRandomString();
@@ -475,7 +372,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       false,
       undefined,
       undefined,
-      convertToDocValue
+      false
     );
     childDoc.parentdoc = this;
     return childDoc;
@@ -529,7 +426,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       field.fieldtype === FieldTypeEnum.Select ||
       field.fieldtype === FieldTypeEnum.AutoComplete
     ) {
-      validateOptions(field, value as string, this);
+      validateOptions(field as OptionField, value as string, this);
     }
 
     validateRequired(field, value, this);
@@ -545,7 +442,10 @@ export class Doc extends Observable<DocValue | Doc[]> {
     await validator(value);
   }
 
-  getValidDict(filterMeta = false, filterComputed = false): DocValueMap {
+  getValidDict(
+    filterMeta: boolean = false,
+    filterComputed: boolean = false
+  ): DocValueMap {
     let fields = this.schema.fields;
     if (filterMeta) {
       fields = this.schema.fields.filter((f) => !f.meta);
@@ -566,7 +466,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       }
 
       if (isPesa(value)) {
-        value = value.copy();
+        value = (value as Money).copy();
       }
 
       if (value === null && this.schema.isSingle) {
@@ -637,11 +537,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
   async _loadLink(field: Field) {
     if (field.fieldtype === FieldTypeEnum.Link) {
-      return await this._loadLinkField(field);
+      return await this._loadLinkField(field as TargetField);
     }
 
     if (field.fieldtype === FieldTypeEnum.DynamicLink) {
-      return await this._loadDynamicLinkField(field);
+      return await this._loadDynamicLinkField(field as DynamicLinkField);
     }
   }
 
@@ -751,27 +651,23 @@ export class Doc extends Observable<DocValue | Doc[]> {
     if (dbValues && docModified !== dbModified) {
       throw new ConflictError(
         this.fyo
-          .t`${this.schema.label} ${this.name} has been modified after loading please reload entry.` +
+          .t`${this.schema.label} ${this.name} has been modified after loading` +
           ` ${dbModified}, ${docModified}`
       );
     }
   }
 
-  async runFormulas() {
-    await this._applyFormula();
-  }
-
   async _applyFormula(
-    changedFieldname?: string,
+    fieldname?: string,
     retriggerChildDocApplyChange?: boolean
   ): Promise<boolean> {
-    let changed = await this._callAllTableFieldsApplyFormula(changedFieldname);
-    changed =
-      (await this._applyFormulaForFields(this, changedFieldname)) || changed;
+    const doc = this;
+    let changed = await this._callAllTableFieldsApplyFormula(fieldname);
+    changed = (await this._applyFormulaForFields(doc, fieldname)) || changed;
 
     if (changed && retriggerChildDocApplyChange) {
-      await this._callAllTableFieldsApplyFormula(changedFieldname);
-      await this._applyFormulaForFields(this, changedFieldname);
+      await this._callAllTableFieldsApplyFormula(fieldname);
+      await this._applyFormulaForFields(doc, fieldname);
     }
 
     return changed;
@@ -800,7 +696,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     childDocs: Doc[],
     fieldname?: string
   ): Promise<boolean> {
-    let changed = false;
+    let changed: boolean = false;
     for (const childDoc of childDocs) {
       if (!childDoc._applyFormula) {
         continue;
@@ -813,9 +709,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _applyFormulaForFields(doc: Doc, fieldname?: string) {
-    const formulaFields = getFormulaSequence(this.formulas)
-      .map((f) => this.fyo.getField(this.schemaName, f))
-      .filter(Boolean);
+    const formulaFields = this.schema.fields.filter(
+      ({ fieldname }) => this.formulas?.[fieldname]
+    );
 
     let changed = false;
     for (const field of formulaFields) {
@@ -867,9 +763,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _insert() {
+    await setName(this, this.fyo);
     this._setBaseMetaValues();
     await this._preSync();
-    await setName(this, this.fyo);
 
     const validDict = this.getValidDict(false, true);
     let data: DocValueMap;
@@ -917,10 +813,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async delete() {
-    if (this.notInserted && this.name) {
-      this.fyo.doc.removeFromCache(this.schemaName, this.name);
-    }
-
     if (!this.canDelete) {
       return;
     }
@@ -974,7 +866,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
   async trigger(event: string, params?: unknown) {
     if (this[event]) {
-      await (this[event] as (args: unknown) => Promise<void>)(params);
+      await (this[event] as Function)(params);
     }
 
     await super.trigger(event, params);
@@ -989,21 +881,19 @@ export class Doc extends Observable<DocValue | Doc[]> {
           try {
             return this.fyo.pesa(value as string | number);
           } catch (err) {
-            (err as Error).message += ` value: '${String(
-              value
-            )}' of type: ${typeof value}, fieldname: '${tablefield}', childfield: '${childfield}'`;
+            (
+              err as Error
+            ).message += ` value: '${value}' of type: ${typeof value}, fieldname: '${tablefield}', childfield: '${childfield}'`;
             throw err;
           }
         }
-
-        return value;
+        return value as Money;
       })
       .reduce((a, b) => a.add(b), this.fyo.pesa(0));
 
     if (convertToFloat) {
       return sum.float;
     }
-
     return sum;
   }
 
@@ -1028,7 +918,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     if (this.numberSeries) {
       delete updateMap.name;
     } else {
-      updateMap.name = String(updateMap.name) + ' CPY';
+      updateMap.name = updateMap.name + ' CPY';
     }
 
     const rawUpdateMap = this.fyo.db.converter.toRawValueMap(
@@ -1050,8 +940,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
    *
    * This may cause the lifecycle function to execute incorrectly.
    */
-
-  /* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars */
   async change(ch: ChangeArg) {}
   async validate() {}
   async beforeSync() {}
@@ -1082,9 +970,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return {};
   }
 
-  static getTreeSettings(fyo: Fyo): TreeViewSettings | void {
-    return;
-  }
+  static getTreeSettings(fyo: Fyo): TreeViewSettings | void {}
 
   static getActions(fyo: Fyo): Action[] {
     return [];

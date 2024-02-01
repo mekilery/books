@@ -3,225 +3,92 @@ import { Doc } from 'fyo/model/doc';
 import { Action, ColumnConfig, DocStatus, RenderData } from 'fyo/model/types';
 import { DateTime } from 'luxon';
 import { Money } from 'pesa';
-import { safeParseFloat } from 'utils/index';
 import { Router } from 'vue-router';
 import {
   AccountRootType,
-  AccountRootTypeEnum,
+  AccountRootTypeEnum
 } from './baseModels/Account/types';
-import { numberSeriesDefaultsMap } from './baseModels/Defaults/Defaults';
-import { Invoice } from './baseModels/Invoice/Invoice';
-import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
-import { StockMovement } from './inventory/StockMovement';
-import { StockTransfer } from './inventory/StockTransfer';
+import {
+  Defaults,
+  numberSeriesDefaultsMap
+} from './baseModels/Defaults/Defaults';
 import { InvoiceStatus, ModelNameEnum } from './types';
 
-export function getQuoteActions(
-  fyo: Fyo,
-  schemaName: ModelNameEnum.SalesQuote
-): Action[] {
-  return [getMakeInvoiceAction(fyo, schemaName)];
-}
-
 export function getInvoiceActions(
-  fyo: Fyo,
-  schemaName: ModelNameEnum.SalesInvoice | ModelNameEnum.PurchaseInvoice
+  schemaName: ModelNameEnum.PurchaseInvoice | ModelNameEnum.SalesInvoice,
+  fyo: Fyo
 ): Action[] {
   return [
-    getMakePaymentAction(fyo),
-    getMakeStockTransferAction(fyo, schemaName),
+    {
+      label: fyo.t`Make Payment`,
+      condition: (doc: Doc) =>
+        doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
+      action: async function makePayment(doc: Doc) {
+        const payment = fyo.doc.getNewDoc('Payment');
+        payment.once('afterSync', async () => {
+          await payment.submit();
+        });
+
+        const isSales = schemaName === 'SalesInvoice';
+        const party = doc.party as string;
+        const paymentType = isSales ? 'Receive' : 'Pay';
+        const hideAccountField = isSales ? 'account' : 'paymentAccount';
+
+        const { openQuickEdit } = await import('src/utils/ui');
+        await openQuickEdit({
+          schemaName: 'Payment',
+          name: payment.name as string,
+          hideFields: ['party', 'paymentType', 'for'],
+          defaults: {
+            party,
+            [hideAccountField]: doc.account,
+            date: new Date().toISOString().slice(0, 10),
+            paymentType,
+            for: [
+              {
+                referenceType: doc.schemaName,
+                referenceName: doc.name,
+                amount: doc.outstandingAmount,
+              },
+            ],
+          },
+        });
+      },
+    },
     getLedgerLinkAction(fyo),
-    getMakeReturnDocAction(fyo),
   ];
 }
 
-export function getStockTransferActions(
-  fyo: Fyo,
-  schemaName: ModelNameEnum.Shipment | ModelNameEnum.PurchaseReceipt
-): Action[] {
-  return [
-    getMakeInvoiceAction(fyo, schemaName),
-    getLedgerLinkAction(fyo, false),
-    getLedgerLinkAction(fyo, true),
-    getMakeReturnDocAction(fyo),
-  ];
-}
-
-export function getMakeStockTransferAction(
-  fyo: Fyo,
-  schemaName: ModelNameEnum.SalesInvoice | ModelNameEnum.PurchaseInvoice
-): Action {
-  let label = fyo.t`Shipment`;
-  if (schemaName === ModelNameEnum.PurchaseInvoice) {
-    label = fyo.t`Purchase Receipt`;
-  }
-
+export function getLedgerLinkAction(fyo: Fyo): Action {
   return {
-    label,
-    group: fyo.t`Create`,
-    condition: (doc: Doc) => doc.isSubmitted && !!doc.stockNotTransferred,
-    action: async (doc: Doc) => {
-      const transfer = await (doc as Invoice).getStockTransfer();
-      if (!transfer || !transfer.name) {
-        return;
-      }
-
-      const { routeTo } = await import('src/utils/ui');
-      const path = `/edit/${transfer.schemaName}/${transfer.name}`;
-      await routeTo(path);
-    },
-  };
-}
-
-export function getMakeInvoiceAction(
-  fyo: Fyo,
-  schemaName:
-    | ModelNameEnum.Shipment
-    | ModelNameEnum.PurchaseReceipt
-    | ModelNameEnum.SalesQuote
-): Action {
-  let label = fyo.t`Sales Invoice`;
-  if (schemaName === ModelNameEnum.PurchaseReceipt) {
-    label = fyo.t`Purchase Invoice`;
-  }
-
-  return {
-    label,
-    group: fyo.t`Create`,
-    condition: (doc: Doc) => {
-      if (schemaName === ModelNameEnum.SalesQuote) {
-        return doc.isSubmitted;
-      } else {
-        return doc.isSubmitted && !doc.backReference;
-      }
-    },
-    action: async (doc: Doc) => {
-      const invoice = await (doc as SalesQuote | StockTransfer).getInvoice();
-      if (!invoice || !invoice.name) {
-        return;
-      }
-
-      const { routeTo } = await import('src/utils/ui');
-      const path = `/edit/${invoice.schemaName}/${invoice.name}`;
-      await routeTo(path);
-    },
-  };
-}
-
-export function getMakePaymentAction(fyo: Fyo): Action {
-  return {
-    label: fyo.t`Payment`,
-    group: fyo.t`Create`,
-    condition: (doc: Doc) =>
-      doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
-    action: async (doc, router) => {
-      const schemaName = doc.schema.name;
-      const payment = (doc as Invoice).getPayment();
-      if (!payment) {
-        return;
-      }
-
-      await payment?.set('referenceType', schemaName);
-      const currentRoute = router.currentRoute.value.fullPath;
-      payment.once('afterSync', async () => {
-        await payment.submit();
-        await doc.load();
-        await router.push(currentRoute);
-      });
-
-      const hideFields = ['party', 'for'];
-
-      if (!fyo.singles.AccountingSettings?.enableInvoiceReturns) {
-        hideFields.push('paymentType');
-      }
-
-      if (doc.schemaName === ModelNameEnum.SalesInvoice) {
-        hideFields.push('account');
-      } else {
-        hideFields.push('paymentAccount');
-      }
-
-      await payment.runFormulas();
-      const { openQuickEdit } = await import('src/utils/ui');
-      await openQuickEdit({
-        doc: payment,
-        hideFields,
-      });
-    },
-  };
-}
-
-export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
-  let label = fyo.t`Accounting Entries`;
-  let reportClassName: 'GeneralLedger' | 'StockLedger' = 'GeneralLedger';
-
-  if (isStock) {
-    label = fyo.t`Stock Entries`;
-    reportClassName = 'StockLedger';
-  }
-
-  return {
-    label,
-    group: fyo.t`View`,
+    label: fyo.t`Ledger Entries`,
     condition: (doc: Doc) => doc.isSubmitted,
     action: async (doc: Doc, router: Router) => {
-      const route = getLedgerLink(doc, reportClassName);
-      await router.push(route);
-    },
-  };
-}
-
-export function getLedgerLink(
-  doc: Doc,
-  reportClassName: 'GeneralLedger' | 'StockLedger'
-) {
-  return {
-    name: 'Report',
-    params: {
-      reportClassName,
-      defaultFilters: JSON.stringify({
-        referenceType: doc.schemaName,
-        referenceName: doc.name,
-      }),
-    },
-  };
-}
-export function getMakeReturnDocAction(fyo: Fyo): Action {
-  return {
-    label: fyo.t`Return`,
-    group: fyo.t`Create`,
-    condition: (doc: Doc) =>
-      (!!fyo.singles.AccountingSettings?.enableInvoiceReturns ||
-        !!fyo.singles.InventorySettings?.enableStockReturns) &&
-      doc.isSubmitted &&
-      !doc.isReturn,
-    action: async (doc: Doc) => {
-      let returnDoc: Invoice | StockTransfer | undefined;
-
-      if (doc instanceof Invoice || doc instanceof StockTransfer) {
-        returnDoc = await doc.getReturnDoc();
-      }
-
-      if (!returnDoc || !returnDoc.name) {
-        return;
-      }
-
-      const { routeTo } = await import('src/utils/ui');
-      const path = `/edit/${doc.schemaName}/${returnDoc.name}`;
-      await routeTo(path);
+      router.push({
+        name: 'Report',
+        params: {
+          reportClassName: 'GeneralLedger',
+          defaultFilters: JSON.stringify({
+            referenceType: doc.schemaName,
+            referenceName: doc.name,
+          }),
+        },
+      });
     },
   };
 }
 
 export function getTransactionStatusColumn(): ColumnConfig {
+  const statusMap = getStatusMap();
+
   return {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
     render(doc) {
       const status = getDocStatus(doc) as InvoiceStatus;
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusText(status);
+      const color = statusColor[status];
+      const label = statusMap[status];
 
       return {
         template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
@@ -242,33 +109,19 @@ export const statusColor: Record<
   NotSaved: 'gray',
   Submitted: 'green',
   Cancelled: 'red',
-  Return: 'green',
-  ReturnIssued: 'green',
 };
 
-export function getStatusText(status: DocStatus | InvoiceStatus): string {
-  switch (status) {
-    case 'Draft':
-      return t`Draft`;
-    case 'Saved':
-      return t`Saved`;
-    case 'NotSaved':
-      return t`Not Saved`;
-    case 'Submitted':
-      return t`Submitted`;
-    case 'Cancelled':
-      return t`Cancelled`;
-    case 'Paid':
-      return t`Paid`;
-    case 'Unpaid':
-      return t`Unpaid`;
-    case 'Return':
-      return t`Return`;
-    case 'ReturnIssued':
-      return t`Return Issued`;
-    default:
-      return '';
-  }
+export function getStatusMap(): Record<DocStatus | InvoiceStatus, string> {
+  return {
+    '': '',
+    Draft: t`Draft`,
+    Unpaid: t`Unpaid`,
+    Paid: t`Paid`,
+    Saved: t`Saved`,
+    NotSaved: t`Not Saved`,
+    Submitted: t`Submitted`,
+    Cancelled: t`Cancelled`,
+  };
 }
 
 export function getDocStatus(
@@ -302,20 +155,6 @@ function getSubmittableDocStatus(doc: RenderData | Doc) {
     return getInvoiceStatus(doc);
   }
 
-  if (
-    [ModelNameEnum.Shipment, ModelNameEnum.PurchaseReceipt].includes(
-      doc.schema.name as ModelNameEnum
-    )
-  ) {
-    if (!!doc.returnAgainst && doc.submitted && !doc.cancelled) {
-      return 'Return';
-    }
-
-    if (doc.isReturned && doc.submitted && !doc.cancelled) {
-      return 'ReturnIssued';
-    }
-  }
-
   if (!!doc.submitted && !doc.cancelled) {
     return 'Submitted';
   }
@@ -328,14 +167,6 @@ function getSubmittableDocStatus(doc: RenderData | Doc) {
 }
 
 export function getInvoiceStatus(doc: RenderData | Doc): InvoiceStatus {
-  if (doc.submitted && !doc.cancelled && doc.returnAgainst) {
-    return 'Return';
-  }
-
-  if (doc.submitted && !doc.cancelled && doc.isReturned) {
-    return 'ReturnIssued';
-  }
-
   if (
     doc.submitted &&
     !doc.cancelled &&
@@ -359,89 +190,6 @@ export function getInvoiceStatus(doc: RenderData | Doc): InvoiceStatus {
   return 'Saved';
 }
 
-export function getSerialNumberStatusColumn(): ColumnConfig {
-  return {
-    label: t`Status`,
-    fieldname: 'status',
-    fieldtype: 'Select',
-    render(doc) {
-      let status = doc.status;
-      if (typeof status !== 'string') {
-        status = 'Inactive';
-      }
-
-      const color = serialNumberStatusColor[status] ?? 'gray';
-      const label = getSerialNumberStatusText(status);
-
-      return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-      };
-    },
-  };
-}
-
-export const serialNumberStatusColor: Record<string, string | undefined> = {
-  Inactive: 'gray',
-  Active: 'green',
-  Delivered: 'blue',
-};
-
-export function getSerialNumberStatusText(status: string): string {
-  switch (status) {
-    case 'Inactive':
-      return t`Inactive`;
-    case 'Active':
-      return t`Active`;
-    case 'Delivered':
-      return t`Delivered`;
-    default:
-      return t`Inactive`;
-  }
-}
-
-export function getPriceListStatusColumn(): ColumnConfig {
-  return {
-    label: t`Enabled For`,
-    fieldname: 'enabledFor',
-    fieldtype: 'Select',
-    render({ isSales, isPurchase }) {
-      let status = t`None`;
-
-      if (isSales && isPurchase) {
-        status = t`Sales and Purchase`;
-      } else if (isSales) {
-        status = t`Sales`;
-      } else if (isPurchase) {
-        status = t`Purchase`;
-      }
-
-      return {
-        template: `<Badge class="text-xs" color="gray">${status}</Badge>`,
-      };
-    },
-  };
-}
-
-export function getPriceListEnabledColumn(): ColumnConfig {
-  return {
-    label: t`Enabled`,
-    fieldname: 'enabled',
-    fieldtype: 'Data',
-    render(doc) {
-      let status = t`Disabled`;
-      let color = 'orange';
-      if (doc.isEnabled) {
-        status = t`Enabled`;
-        color = 'green';
-      }
-
-      return {
-        template: `<Badge class="text-xs" color="${color}">${status}</Badge>`,
-      };
-    },
-  };
-}
-
 export async function getExchangeRate({
   fromCurrency,
   toCurrency,
@@ -463,7 +211,9 @@ export async function getExchangeRate({
 
   let exchangeRate = 0;
   if (localStorage) {
-    exchangeRate = safeParseFloat(localStorage.getItem(cacheKey) as string);
+    exchangeRate = parseFloat(
+      localStorage.getItem(cacheKey as string) as string
+    );
   }
 
   if (exchangeRate && exchangeRate !== 1) {
@@ -474,14 +224,9 @@ export async function getExchangeRate({
     const res = await fetch(
       `https://api.vatcomply.com/rates?date=${date}&base=${fromCurrency}&symbols=${toCurrency}`
     );
-    const data = (await res.json()) as {
-      base: string;
-      data: string;
-      rates: Record<string, number>;
-    };
+    const data = await res.json();
     exchangeRate = data.rates[toCurrency];
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error(error);
     exchangeRate ??= 1;
   }
@@ -516,49 +261,8 @@ export function getNumberSeries(schemaName: string, fyo: Fyo) {
     return undefined;
   }
 
-  const defaults = fyo.singles.Defaults;
+  const defaults = fyo.singles.Defaults as Defaults | undefined;
   const field = fyo.getField(schemaName, 'numberSeries');
   const value = defaults?.[numberSeriesKey] as string | undefined;
   return value ?? (field?.default as string | undefined);
-}
-
-export function getDocStatusListColumn(): ColumnConfig {
-  return {
-    label: t`Status`,
-    fieldname: 'status',
-    fieldtype: 'Select',
-    render(doc) {
-      const status = getDocStatus(doc);
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusText(status);
-
-      return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-      };
-    },
-  };
-}
-
-type ModelsWithItems = Invoice | StockTransfer | StockMovement;
-export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
-  if (!doc.canEdit) {
-    return;
-  }
-
-  const items = (doc.items ?? []) as NonNullable<M['items']>[number][];
-
-  let item = items.find((i) => i.item === name);
-  if (item) {
-    const q = item.quantity ?? 0;
-    await item.set('quantity', q + 1);
-    return;
-  }
-
-  await doc.append('items');
-  item = doc.items?.at(-1);
-  if (!item) {
-    return;
-  }
-
-  await item.set('item', name);
 }

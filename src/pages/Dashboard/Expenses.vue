@@ -7,22 +7,22 @@
       </template>
     </SectionHeader>
 
-    <div v-show="hasData" class="flex relative">
+    <div class="flex relative" v-show="hasData">
       <!-- Chart Legend -->
       <div class="w-1/2 flex flex-col gap-4 justify-center">
         <!-- Ledgend Item -->
         <div
-          v-for="(d, i) in expenses"
-          :key="d.account"
           class="flex items-center text-sm"
+          v-for="(d, i) in expenses"
+          :key="d.name"
           @mouseover="active = i"
           @mouseleave="active = null"
         >
           <div class="w-3 h-3 rounded-sm flex-shrink-0" :class="d.class" />
-          <p class="ms-2 overflow-x-auto whitespace-nowrap no-scrollbar w-28">
+          <p class="ml-2 overflow-x-auto whitespace-nowrap no-scrollbar w-28">
             {{ d.account }}
           </p>
-          <p class="whitespace-nowrap flex-shrink-0 ms-auto">
+          <p class="whitespace-nowrap flex-shrink-0 ml-auto">
             {{ fyo.format(d?.total ?? 0, 'Currency') }}
           </p>
         </div>
@@ -34,9 +34,9 @@
         :offset-x="3"
         :thickness="10"
         :text-offset-x="6.5"
-        :value-formatter="(value: number) => fyo.format(value, 'Currency')"
+        :value-formatter="(value) => fyo.format(value, 'Currency')"
         :total-label="t`Total Spending`"
-        @change="(value: number) => (active = value)"
+        @change="(value) => (active = value)"
       />
     </div>
 
@@ -52,48 +52,43 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { truncate } from 'lodash';
 import { fyo } from 'src/initFyo';
 import { uicolors } from 'src/utils/colors';
 import { getDatesAndPeriodList } from 'src/utils/misc';
-import { defineComponent } from 'vue';
 import DonutChart from '../../components/Charts/DonutChart.vue';
-import DashboardChartBase from './BaseDashboardChart.vue';
-import PeriodSelector from './PeriodSelector.vue';
-import SectionHeader from './SectionHeader.vue';
+import PeriodSelector from './PeriodSelector';
+import SectionHeader from './SectionHeader';
 
-// Linting broken in this file cause of `extends: ...`
-/* 
-  eslint-disable @typescript-eslint/no-unsafe-argument, 
-  @typescript-eslint/no-unsafe-return,
-  @typescript-eslint/restrict-plus-operands
-*/
-export default defineComponent({
+export default {
   name: 'Expenses',
   components: {
     DonutChart,
     PeriodSelector,
     SectionHeader,
   },
-  extends: DashboardChartBase,
   data: () => ({
-    active: null as null | number,
-    expenses: [] as {
-      account: string;
-      total: number;
-      color: string;
-      class: string;
-    }[],
+    period: 'This Year',
+    active: null,
+    expenses: [],
   }),
+  watch: {
+    period() {
+      this.setData();
+    },
+  },
+  activated() {
+    this.setData();
+  },
   computed: {
-    totalExpense(): number {
+    totalExpense() {
       return this.expenses.reduce((sum, expense) => sum + expense.total, 0);
     },
-    hasData(): boolean {
+    hasData() {
       return this.expenses.length > 0;
     },
-    sectors(): { color: string; label: string; value: number }[] {
+    sectors() {
       return this.expenses.map(({ account, color, total }) => ({
         color,
         label: truncate(account, { length: 21 }),
@@ -101,12 +96,9 @@ export default defineComponent({
       }));
     },
   },
-  activated() {
-    this.setData();
-  },
   methods: {
     async setData() {
-      const { fromDate, toDate } = getDatesAndPeriodList(this.period);
+      const { fromDate, toDate } = await getDatesAndPeriodList(this.period);
       let topExpenses = await fyo.db.getTopExpenses(
         fromDate.toISO(),
         toDate.toISO()
@@ -120,16 +112,16 @@ export default defineComponent({
         { class: 'bg-pink-100', hex: uicolors.pink['100'] },
       ];
 
-      this.expenses = topExpenses
+      topExpenses = topExpenses
         .filter((e) => e.total > 0)
         .map((d, i) => {
-          return {
-            ...d,
-            color: shades[i].hex,
-            class: shades[i].class,
-          };
+          d.color = shades[i].hex;
+          d.class = shades[i].class;
+          return d;
         });
+
+      this.expenses = topExpenses;
     },
   },
-});
+};
 </script>

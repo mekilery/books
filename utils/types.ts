@@ -1,5 +1,3 @@
-import type { ConfigFile } from 'fyo/core/types';
-
 export type UnknownMap = Record<string, unknown>;
 export type Translation = { translation: string; context?: string };
 export type LanguageMap = Record<string, Translation>;
@@ -25,18 +23,14 @@ export interface VersionParts {
   beta?: number;
 }
 
-export type Creds = {
-  errorLogUrl: string;
-  telemetryUrl: string;
-  tokenString: string;
-};
+export type Creds = { errorLogUrl: string; telemetryUrl: string; tokenString: string };
 
 export type UnexpectedLogObject = {
   name: string;
   message: string;
   stack: string;
   more: Record<string, unknown>;
-};
+}
 
 export interface SelectFileOptions {
   title: string;
@@ -49,27 +43,4 @@ export interface SelectFileReturn {
   success: boolean;
   data: Buffer;
   canceled: boolean;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type PropertyEnum<T extends Record<string, any>> = {
-  [key in keyof Required<T>]: key;
-};
-
-export type TemplateFile = { file: string; template: string; modified: string };
-
-export interface Keys extends ModMap {
-  pressed: Set<string>;
-}
-
-interface ModMap {
-  alt: boolean;
-  ctrl: boolean;
-  meta: boolean;
-  shift: boolean;
-  repeat: boolean;
-}
-
-export interface ConfigFilesWithModified extends ConfigFile {
-  modified: string;
 }

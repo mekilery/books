@@ -1,58 +1,31 @@
 <template>
-  <AutoComplete
+  <FormControl
     :df="languageDf"
     :value="value"
-    :border="true"
-    input-class="rounded py-1.5"
     @change="onChange"
+    :border="true"
+    :input-class="'rounded py-1.5'"
   />
 </template>
-<script lang="ts">
+<script>
 import { DEFAULT_LANGUAGE } from 'fyo/utils/consts';
-import { OptionField } from 'schemas/types';
 import { fyo } from 'src/initFyo';
 import { languageCodeMap, setLanguageMap } from 'src/utils/language';
-import { defineComponent } from 'vue';
-import AutoComplete from './AutoComplete.vue';
+import FormControl from './FormControl.vue';
 
-export default defineComponent({
-  components: { AutoComplete },
+export default {
+  methods: {
+    setLanguageMap,
+  },
   props: {
     dontReload: {
       type: Boolean,
       default: false,
     },
   },
-  computed: {
-    value() {
-      return fyo.config.get('language') ?? DEFAULT_LANGUAGE;
-    },
-    languageDf(): OptionField {
-      const preset = fyo.config.get('language');
-      let language = DEFAULT_LANGUAGE;
-      if (typeof preset === 'string') {
-        language = preset;
-      }
-
-      return {
-        fieldname: 'language',
-        label: this.t`Language`,
-        fieldtype: 'AutoComplete',
-        options: Object.keys(languageCodeMap).map((value) => ({
-          label: value,
-          value,
-        })),
-        default: language,
-        description: this.t`Set the display language.`,
-      };
-    },
-  },
+  components: { FormControl },
   methods: {
-    onChange(value: unknown) {
-      if (typeof value !== 'string') {
-        return;
-      }
-
+    onChange(value) {
       if (languageCodeMap[value] === undefined) {
         return;
       }
@@ -60,5 +33,20 @@ export default defineComponent({
       setLanguageMap(value, this.dontReload);
     },
   },
-});
+  computed: {
+    value() {
+      return fyo.config.get('language') ?? DEFAULT_LANGUAGE;
+    },
+    languageDf() {
+      return {
+        fieldname: 'language',
+        label: this.t`Language`,
+        fieldtype: 'AutoComplete',
+        options: Object.keys(languageCodeMap),
+        default: fyo.config.get('language') ?? DEFAULT_LANGUAGE,
+        description: this.t`Set the display language.`,
+      };
+    },
+  },
+};
 </script>

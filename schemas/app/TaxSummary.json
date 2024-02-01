@@ -11,27 +11,16 @@
       "required": true
     },
     {
-      "fieldname": "from_account",
-      "label": "Tax Invoice Account",
-      "fieldtype": "Link",
-      "target": "Account",
-      "required": false,
-      "hidden": true
-    },
-    {
       "fieldname": "rate",
-      "label": "Tax Rate",
+      "label": "Rate",
       "fieldtype": "Float",
-      "required": true,
-      "readOnly": true
+      "required": true
     },
     {
       "fieldname": "amount",
-      "label": "Tax Amount",
+      "label": "Amount",
       "fieldtype": "Currency",
-      "required": true,
-      "readOnly": true
+      "required": true
     }
-  ],
-  "tableFields": ["account", "rate", "amount"]
+  ]
 }

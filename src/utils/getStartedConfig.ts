@@ -1,29 +1,31 @@
 import { t } from 'fyo';
-import { ModelNameEnum } from 'models/types';
 import { openSettings, routeTo } from './ui';
-import { GetStartedConfigItem } from './types';
 
-export function getGetStartedConfig(): GetStartedConfigItem[] {
-  /* eslint-disable @typescript-eslint/no-misused-promises */
+export function getGetStartedConfig() {
   return [
     {
       label: t`Organisation`,
+
       items: [
+        {
+          key: 'Invoice',
+          label: t`Invoice`,
+          icon: 'invoice',
+          description: t`Customize your invoices by adding a logo and address details`,
+          fieldname: 'invoiceSetup',
+          action() {
+            openSettings('Invoice');
+          },
+        },
         {
           key: 'General',
           label: t`General`,
           icon: 'general',
           description: t`Set up your company information, email, country and fiscal year`,
           fieldname: 'companySetup',
-          action: () => openSettings(ModelNameEnum.AccountingSettings),
-        },
-        {
-          key: 'Print',
-          label: t`Print`,
-          icon: 'invoice',
-          description: t`Customize your invoices by adding a logo and address details`,
-          fieldname: 'printSetup',
-          action: () => openSettings(ModelNameEnum.PrintSettings),
+          action() {
+            openSettings('General');
+          },
         },
         {
           key: 'System',
@@ -31,19 +33,24 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           icon: 'system',
           description: t`Setup system defaults like date format and display precision`,
           fieldname: 'systemSetup',
-          action: () => openSettings(ModelNameEnum.SystemSettings),
+          action() {
+            openSettings('System');
+          },
         },
       ],
     },
     {
       label: t`Accounts`,
+
       items: [
         {
           key: 'Review Accounts',
           label: t`Review Accounts`,
           icon: 'review-ac',
           description: t`Review your chart of accounts, add any account or tax heads as needed`,
-          action: () => routeTo('/chart-of-accounts'),
+          action: () => {
+            routeTo('/chart-of-accounts');
+          },
           fieldname: 'chartOfAccountsReviewed',
           documentation:
             'https://docs.frappebooks.com/setting-up/initial-entries.html#add-additional-bank-accounts',
@@ -71,19 +78,14 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
     },
     {
       label: t`Sales`,
+
       items: [
         {
           key: 'Add Sales Items',
           label: t`Add Items`,
           icon: 'item',
           description: t`Add products or services that you sell to your customers`,
-          action: () =>
-            routeTo({
-              path: `/list/Item/${t`Sales Items`}`,
-              query: {
-                filters: JSON.stringify({ for: 'Sales' }),
-              },
-            }),
+          action: () => routeTo(`/list/Item/for/Sales/${t`Sales Items`}`),
           fieldname: 'salesItemCreated',
           documentation:
             'https://docs.frappebooks.com/setting-up/initial-entries.html#add-sales-items',
@@ -93,13 +95,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           label: t`Add Customers`,
           icon: 'customer',
           description: t`Add a few customers to create your first sales invoice`,
-          action: () =>
-            routeTo({
-              path: `/list/Party/${t`Customers`}`,
-              query: {
-                filters: JSON.stringify({ role: 'Customer' }),
-              },
-            }),
+          action: () => routeTo(`/list/Party/role/Customer/${t`Customers`}`),
           fieldname: 'customerCreated',
           documentation:
             'https://docs.frappebooks.com/setting-up/initial-entries.html#add-customers',
@@ -118,6 +114,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
     },
     {
       label: t`Purchase`,
+
       items: [
         {
           key: 'Add Purchase Items',
@@ -125,12 +122,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           icon: 'item',
           description: t`Add products or services that you buy from your suppliers`,
           action: () =>
-            routeTo({
-              path: `/list/Item/${t`Purchase Items`}`,
-              query: {
-                filters: JSON.stringify({ for: 'Purchases' }),
-              },
-            }),
+            routeTo(`/list/Item/for/Purchases/${t`Purchase Items`}`),
           fieldname: 'purchaseItemCreated',
         },
         {
@@ -138,11 +130,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           label: t`Add Suppliers`,
           icon: 'supplier',
           description: t`Add a few suppliers to create your first purchase invoice`,
-          action: () =>
-            routeTo({
-              path: `/list/Party/${t`Suppliers`}`,
-              query: { filters: JSON.stringify({ role: 'Supplier' }) },
-            }),
+          action: () => routeTo(`/list/Party/role/Supplier/${t`Suppliers`}`),
           fieldname: 'supplierCreated',
         },
         {

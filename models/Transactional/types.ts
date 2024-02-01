@@ -17,4 +17,9 @@ export interface LedgerEntry {
   credit: Money;
 }
 
+export interface AccountBalanceChange {
+  name: string;
+  change: Money;
+}
+
 export type TransactionType = 'credit' | 'debit';

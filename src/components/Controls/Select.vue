@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="showLabel" :class="labelClasses">
+    <div :class="labelClasses" v-if="showLabel">
       {{ df.label }}
     </div>
     <div
@@ -20,15 +20,10 @@
           'text-gray-500': !value,
         }"
         :value="value"
-        @change="onChange"
+        @change="(e) => triggerChange(e.target.value)"
         @focus="(e) => $emit('focus', e)"
       >
-        <option
-          v-if="inputPlaceholder && !showLabel"
-          value=""
-          disabled
-          selected
-        >
+        <option value="" disabled selected>
           {{ inputPlaceholder }}
         </option>
         <option
@@ -50,7 +45,7 @@
         <path
           d="M1 2.636L2.636 1l1.637 1.636M1 7.364L2.636 9l1.637-1.636"
           class="stroke-current"
-          :class="showMandatory ? 'text-red-400' : 'text-gray-400'"
+          :class="showMandatory ? 'text-red-500' : 'text-gray-500'"
           fill="none"
           fill-rule="evenodd"
           stroke-linecap="round"
@@ -61,36 +56,31 @@
   </div>
 </template>
 
-<script lang="ts">
-import Base from './Base.vue';
+<script>
+import Base from './Base';
 
-import { defineComponent } from 'vue';
-import { SelectOption } from 'schemas/types';
-export default defineComponent({
+export default {
   name: 'Select',
   extends: Base,
   emits: ['focus'],
-  computed: {
-    options(): SelectOption[] {
-      if (this.df.fieldtype !== 'Select') {
-        return [];
-      }
-
-      return this.df.options;
-    },
-  },
   methods: {
-    onChange(e: Event) {
-      const target = e.target;
-      if (
-        !(target instanceof HTMLSelectElement) &&
-        !(target instanceof HTMLInputElement)
-      ) {
-        return;
+    map(v) {
+      if (this.df.map) {
+        return this.df.map[v] ?? v;
       }
-
-      this.triggerChange(target.value);
+      return v;
     },
   },
-});
+  computed: {
+    options() {
+      let options = this.df.options;
+      return options.map((o) => {
+        if (typeof o === 'string') {
+          return { label: this.map(o), value: o };
+        }
+        return o;
+      });
+    },
+  },
+};
 </script>

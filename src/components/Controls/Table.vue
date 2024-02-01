@@ -1,89 +1,79 @@
 <template>
   <div v-if="tableFields?.length">
-    <div v-if="showLabel" class="text-gray-600 text-sm mb-1">
+    <div class="text-gray-600 text-sm mb-1" v-if="showLabel">
       {{ df.label }}
     </div>
 
-    <div :class="border ? 'border rounded-md' : ''">
-      <!-- Title Row -->
-      <Row
-        :ratio="ratio"
-        class="border-b px-2 text-gray-600 w-full flex items-center"
-      >
-        <div class="flex items-center ps-2">#</div>
-        <div
-          v-for="df in tableFields"
-          :key="df.fieldname"
-          class="items-center flex px-2 h-row-mid"
-          :class="{
-            'ms-auto': isNumeric(df),
-          }"
-          :style="{
-            height: ``,
-          }"
-        >
-          {{ df.label }}
-        </div>
-      </Row>
-
-      <!-- Data Rows -->
+    <!-- Title Row -->
+    <Row
+      :ratio="ratio"
+      class="border-b px-2 text-gray-600 w-full flex items-center"
+    >
+      <div class="flex items-center pl-2">#</div>
       <div
-        v-if="value"
-        class="overflow-auto custom-scroll"
-        :style="{ 'max-height': maxHeight }"
+        class="items-center flex px-2 h-row-mid"
+        :class="{
+          'ml-auto': isNumeric(df),
+        }"
+        v-for="df in tableFields"
+        :key="df.fieldname"
+        :style="{
+          height: ``,
+        }"
       >
-        <TableRow
-          v-for="(row, idx) of value"
-          ref="table-row"
-          :key="row.name"
-          :class="idx < value.length - 1 ? 'border-b' : ''"
-          v-bind="{ row, tableFields, size, ratio, isNumeric }"
-          :read-only="isReadOnly"
-          :can-edit-row="canEditRow"
-          @remove="removeRow(row)"
-          @change="(field, value) => $emit('row-change', field, value, df)"
-        />
+        {{ df.label }}
       </div>
+    </Row>
 
-      <!-- Add Row and Row Count -->
-      <Row
-        v-if="!isReadOnly"
-        :ratio="ratio"
-        class="
-          text-gray-500
-          cursor-pointer
-          px-2
-          w-full
-          h-row-mid
-          flex
-          items-center
-        "
-        :class="value.length > 0 ? 'border-t' : ''"
-        @click="addRow"
-      >
-        <div class="flex items-center ps-1">
-          <feather-icon name="plus" class="w-4 h-4 text-gray-500" />
-        </div>
-        <div
-          class="flex justify-between px-2"
-          :style="`grid-column: 2 / ${ratio.length + 1}`"
-        >
-          <p>
-            {{ t`Add Row` }}
-          </p>
-          <p
-            v-if="
-              value &&
-              maxRowsBeforeOverflow &&
-              value.length > maxRowsBeforeOverflow
-            "
-            class="text-end px-2"
-          >
-            {{ t`${value.length} rows` }}
-          </p>
-        </div>
-      </Row>
+    <!-- Data Rows -->
+    <div
+      class="overflow-auto"
+      :style="{ 'max-height': maxHeight }"
+      v-if="value"
+    >
+      <TableRow
+        v-for="row in value"
+        ref="table-row"
+        :key="row.name"
+        v-bind="{ row, tableFields, size, ratio, isNumeric }"
+        :read-only="isReadOnly"
+        @remove="removeRow(row)"
+        :can-edit-row="canEditRow"
+      />
     </div>
+
+    <!-- Add Row and Row Count -->
+    <Row
+      :ratio="ratio"
+      class="
+        text-gray-500
+        cursor-pointer
+        border-transparent
+        px-2
+        w-full
+        h-row-mid
+        flex
+        items-center
+      "
+      v-if="!isReadOnly"
+      @click="addRow"
+    >
+      <div class="flex items-center pl-1">
+        <feather-icon name="plus" class="w-4 h-4 text-gray-500" />
+      </div>
+      <div class="flex justify-between px-2">
+        {{ t`Add Row` }}
+      </div>
+      <div v-for="i in ratio.slice(3).length" :key="i"></div>
+      <div
+        class="text-right px-2"
+        v-if="
+          value && maxRowsBeforeOverflow && value.length > maxRowsBeforeOverflow
+        "
+      >
+        {{ t`${value.length} rows` }}
+      </div>
+    </Row>
   </div>
 </template>
 
@@ -96,10 +86,7 @@ import TableRow from './TableRow.vue';
 
 export default {
   name: 'Table',
-  components: {
-    Row,
-    TableRow,
-  },
+  emits: ['editrow'],
   extends: Base,
   props: {
     value: { type: Array, default: () => [] },
@@ -111,42 +98,21 @@ export default {
       type: Number,
       default: 3,
     },
-    border: {
-      type: Boolean,
-      default: false,
-    },
   },
-  emits: ['editrow', 'row-change'],
-  data() {
-    return { maxHeight: '' };
+  components: {
+    Row,
+    TableRow,
   },
-  computed: {
-    height() {
-      if (this.size === 'small') {
-      }
-      return 2;
-    },
-    canEditRow() {
-      return this.df.edit;
-    },
-    ratio() {
-      const ratio = [0.3].concat(this.tableFields.map(() => 1));
-
-      if (this.canEditRow) {
-        return ratio.concat(0.3);
-      }
-
-      return ratio;
-    },
-    tableFields() {
-      const fields = fyo.schemaMap[this.df.target].tableFields ?? [];
-      return fields.map((fieldname) => fyo.getField(this.df.target, fieldname));
-    },
+  inject: {
+    doc: { default: null },
   },
   watch: {
     value() {
       this.setMaxHeight();
     },
+  },
+  data() {
+    return { maxHeight: '' };
   },
   mounted() {
     if (fyo.store.isDevelopment) {
@@ -155,11 +121,17 @@ export default {
   },
   methods: {
     focus() {},
-    async addRow() {
-      await this.doc.append(this.df.fieldname);
-      await nextTick();
-      this.scrollToRow(this.value.length - 1);
-      this.triggerChange(this.value);
+    addRow() {
+      this.doc.append(this.df.fieldname, {}).then((s) => {
+        if (!s) {
+          return;
+        }
+
+        nextTick(() => {
+          this.scrollToRow(this.value.length - 1);
+        });
+        this.triggerChange(this.value);
+      });
     },
     removeRow(row) {
       this.doc.remove(this.df.fieldname, row.idx).then((s) => {
@@ -191,6 +163,29 @@ export default {
 
       const maxHeight = rowHeight * Math.min(this.maxRowsBeforeOverflow, size);
       return (this.maxHeight = `${maxHeight}px`);
+    },
+  },
+  computed: {
+    height() {
+      if (this.size === 'small') {
+      }
+      return 2;
+    },
+    canEditRow() {
+      return this.df.edit;
+    },
+    ratio() {
+      const ratio = [0.3].concat(this.tableFields.map(() => 1));
+
+      if (this.canEditRow) {
+        return ratio.concat(0.3);
+      }
+
+      return ratio;
+    },
+    tableFields() {
+      const fields = fyo.schemaMap[this.df.target].tableFields ?? [];
+      return fields.map((fieldname) => fyo.getField(this.df.target, fieldname));
     },
   },
 };

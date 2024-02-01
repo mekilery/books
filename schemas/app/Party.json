@@ -4,18 +4,16 @@
   "naming": "manual",
   "fields": [
     {
-      "fieldname": "image",
-      "label": "Image",
-      "fieldtype": "AttachImage",
-      "section": "Default"
-    },
-    {
       "fieldname": "name",
       "label": "Name",
       "fieldtype": "Data",
       "required": true,
-      "placeholder": "Full Name",
-      "section": "Default"
+      "placeholder": "Full Name"
+    },
+    {
+      "fieldname": "image",
+      "label": "Image",
+      "fieldtype": "AttachImage"
     },
     {
       "fieldname": "role",
@@ -36,38 +34,20 @@
           "label": "Customer"
         }
       ],
-      "required": true,
-      "section": "Default"
-    },
-    {
-      "fieldname": "email",
-      "label": "Email",
-      "fieldtype": "Data",
-      "placeholder": "john@doe.com",
-      "section": "Contacts"
-    },
-    {
-      "fieldname": "phone",
-      "label": "Phone",
-      "fieldtype": "Data",
-      "placeholder": "Phone",
-      "section": "Contacts"
-    },
-    {
-      "fieldname": "address",
-      "label": "Address",
-      "fieldtype": "Link",
-      "target": "Address",
-      "create": true,
-      "section": "Contacts"
+      "readOnly": true,
+      "required": true
     },
     {
       "fieldname": "defaultAccount",
       "label": "Default Account",
       "fieldtype": "Link",
       "target": "Account",
-      "create": true,
-      "section": "Billing"
+      "create": true
+    },
+    {
+      "fieldname": "outstandingAmount",
+      "label": "Outstanding Amount",
+      "fieldtype": "Currency"
     },
     {
       "fieldname": "currency",
@@ -75,20 +55,32 @@
       "fieldtype": "Link",
       "target": "Currency",
       "placeholder": "INR",
-      "create": true,
-      "section": "Billing"
+      "create": true
+    },
+    {
+      "fieldname": "email",
+      "label": "Email",
+      "fieldtype": "Data",
+      "placeholder": "john@doe.com"
+    },
+    {
+      "fieldname": "phone",
+      "label": "Phone",
+      "fieldtype": "Data",
+      "placeholder": "Phone"
+    },
+    {
+      "fieldname": "address",
+      "label": "Address",
+      "fieldtype": "Link",
+      "target": "Address",
+      "placeholder": "Click to create",
+      "inline": true
     },
     {
       "fieldname": "taxId",
       "label": "Tax ID",
-      "fieldtype": "Data",
-      "section": "Billing"
-    },
-    {
-      "fieldname": "outstandingAmount",
-      "label": "Outstanding Amount",
-      "fieldtype": "Currency",
-      "hidden": true
+      "fieldtype": "Data"
     }
   ],
   "quickEditFields": [

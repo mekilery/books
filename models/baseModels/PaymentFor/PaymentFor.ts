@@ -60,7 +60,7 @@ export class PaymentFor extends Doc {
 
         const outstandingAmount = (await this.fyo.getValue(
           this.referenceType as string,
-          this.referenceName,
+          this.referenceName as string,
           'outstandingAmount'
         )) as Money;
 
@@ -105,11 +105,10 @@ export class PaymentFor extends Doc {
         return;
       }
 
-      const referenceType = this.referenceType ?? ModelNameEnum.SalesInvoice;
-      const label = this.fyo.schemaMap[referenceType]?.label ?? referenceType;
-
       throw new NotFoundError(
-        t`${label} ${value as string} does not exist`,
+        t`${this.fyo.schemaMap[this.referenceType!]?.label!} ${
+          value as string
+        } does not exist`,
         false
       );
     },

@@ -14,7 +14,7 @@
     <div class="flex gap-1 items-center justify-self-center">
       <feather-icon
         name="chevron-left"
-        class="w-4 h-4 rtl-rotate-180"
+        class="w-4 h-4"
         :class="
           pageNo > 1 ? 'text-gray-600 cursor-pointer' : 'text-transparent'
         "
@@ -23,12 +23,12 @@
       <div class="flex gap-1 bg-gray-100 rounded">
         <input
           type="number"
-          class="w-7 text-end outline-none bg-transparent focus:text-gray-900"
+          class="w-7 text-right outline-none bg-transparent focus:text-gray-900"
           :value="pageNo"
-          min="1"
-          :max="maxPages"
           @change="(e) => setPageNo(e.target.value)"
           @input="(e) => setPageNo(e.target.value)"
+          min="1"
+          :max="maxPages"
         />
         <p class="text-gray-600">/</p>
         <p class="w-7">
@@ -37,7 +37,7 @@
       </div>
       <feather-icon
         name="chevron-right"
-        class="w-4 h-4 rtl-rotate-180"
+        class="w-4 h-4"
         :class="
           pageNo < maxPages
             ? 'text-gray-600 cursor-pointer'
@@ -49,18 +49,18 @@
 
     <!-- Count Selector -->
     <div
-      v-if="filteredCounts.length"
       class="border border-gray-100 rounded flex justify-self-end"
+      v-if="filteredCounts.length"
     >
       <template v-for="c in filteredCounts" :key="c + '-count'">
         <button
+          @click="setCount(c)"
           class="w-9"
           :class="
             count === c || (count === itemCount && c === -1)
               ? 'bg-gray-100'
               : ''
           "
-          @click="setCount(c)"
         >
           {{ c === -1 ? t`All` : c }}
         </button>
@@ -72,16 +72,20 @@
 import { defineComponent } from 'vue';
 
 export default defineComponent({
+  emits: ['index-change'],
   props: {
     itemCount: { type: Number, default: 0 },
     allowedCounts: { type: Array, default: () => [50, 100, 500, -1] },
   },
-  emits: ['index-change'],
   data() {
     return {
       pageNo: 1,
       count: 0,
     };
+  },
+  mounted() {
+    this.count = this.allowedCounts[0];
+    this.emitIndices();
   },
   computed: {
     maxPages() {
@@ -90,10 +94,6 @@ export default defineComponent({
     filteredCounts() {
       return this.allowedCounts.filter(this.filterCount);
     },
-  },
-  mounted() {
-    this.count = this.allowedCounts[0];
-    this.emitIndices();
   },
   methods: {
     filterCount(count) {

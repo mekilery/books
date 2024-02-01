@@ -2,15 +2,9 @@
  * Properties of a schema which are to be translated,
  * irrespective of nesting.
  */
-export const schemaTranslateables = [
-  'label',
-  'description',
-  'placeholder',
-  'section',
-  'tab',
-];
+export const schemaTranslateables = ['label', 'description', 'placeholder'];
 
-export function getIndexFormat(inp: string | string[] | unknown) {
+export function getIndexFormat(inp: string | string[]) {
   /**
    * converts:
    * ['This is an ', ,' interpolated ',' string.'] and
@@ -26,7 +20,7 @@ export function getIndexFormat(inp: string | string[] | unknown) {
   } else if (inp instanceof Array) {
     snippets = inp;
   } else {
-    throw new Error(`invalid input ${String(inp)} of type ${typeof inp}`);
+    throw new Error(`invalid input ${inp} of type ${typeof inp}`);
   }
 
   if (snippets === undefined) {
@@ -43,7 +37,7 @@ export function getIndexFormat(inp: string | string[] | unknown) {
       str += s;
       return;
     }
-    str += s + '${' + String(i) + '}';
+    str += s + '${' + i + '}';
   });
 
   return str;
@@ -70,5 +64,5 @@ export function getWhitespaceSanitized(str: string) {
 }
 
 export function getIndexList(str: string) {
-  return [...str.matchAll(/\${([^}]+)}/g)].map(([, i]) => parseInt(i));
+  return [...str.matchAll(/\${([^}]+)}/g)].map(([_, i]) => parseInt(i));
 }

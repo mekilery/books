@@ -1,24 +1,32 @@
 <template>
-  <Transition>
+  <div
+    class="
+      fixed
+      top-0
+      left-0
+      w-screen
+      h-screen
+      z-20
+      flex
+      justify-center
+      items-center
+    "
+    style="background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(4px)"
+    @click="$emit('closemodal')"
+    v-if="openModal"
+  >
     <div
-      v-if="openModal"
-      class="backdrop z-20 flex justify-center items-center"
-      @click="$emit('closemodal')"
+      class="bg-white rounded-lg shadow-2xl w-form border overflow-hidden"
+      v-bind="$attrs"
+      @click.stop
     >
-      <div
-        class="bg-white rounded-lg shadow-2xl border overflow-hidden inner"
-        v-bind="$attrs"
-        @click.stop
-      >
-        <slot></slot>
-      </div>
+      <slot></slot>
     </div>
-  </Transition>
+  </div>
 </template>
 
 <script lang="ts">
-import { shortcutsKey } from 'src/utils/injectionKeys';
-import { defineComponent, inject } from 'vue';
+import { defineComponent } from 'vue';
 
 export default defineComponent({
   props: {
@@ -26,47 +34,29 @@ export default defineComponent({
       default: false,
       type: Boolean,
     },
+    setCloseListener: {
+      default: true,
+      type: Boolean,
+    },
   },
   emits: ['closemodal'],
-  setup() {
-    const context = `Modal-` + Math.random().toString(36).slice(2, 6);
-    return { shortcuts: inject(shortcutsKey), context };
-  },
   watch: {
     openModal(value: boolean) {
       if (value) {
-        this.shortcuts?.set(this.context, ['Escape'], () => {
-          this.$emit('closemodal');
-        });
+        document.addEventListener('keyup', this.escapeEventListener);
       } else {
-        this.shortcuts?.delete(this.context);
+        document.removeEventListener('keyup', this.escapeEventListener);
       }
+    },
+  },
+  methods: {
+    escapeEventListener(event: KeyboardEvent) {
+      if (event.code !== 'Escape') {
+        return;
+      }
+
+      this.$emit('closemodal');
     },
   },
 });
 </script>
-<style scoped>
-.v-enter-active,
-.v-leave-active {
-  transition: all 100ms ease-out;
-}
-
-.inner {
-  transition: all 150ms ease-out;
-}
-
-.v-enter-from,
-.v-leave-to {
-  opacity: 0;
-}
-
-.v-enter-from .inner,
-.v-leave-to .inner {
-  transform: translateY(-50px);
-}
-
-.v-enter-to .inner,
-.v-leave-from .inner {
-  transform: translateY(0px);
-}
-</style>

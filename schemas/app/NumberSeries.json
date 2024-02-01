@@ -36,10 +36,6 @@
           "label": "Sales Invoice"
         },
         {
-          "value": "SalesQuote",
-          "label": "Sales Quote"
-        },
-        {
           "value": "PurchaseInvoice",
           "label": "Purchase Invoice"
         },
@@ -50,22 +46,11 @@
         {
           "value": "JournalEntry",
           "label": "Journal Entry"
-        },
-        {
-          "value": "StockMovement",
-          "label": "Stock Movement"
-        },
-        {
-          "value": "Shipment",
-          "label": "Shipment"
-        },
-        {
-          "value": "PurchaseReceipt",
-          "label": "Purchase Receipt"
         }
       ],
       "default": "-",
-      "required": true
+      "required": true,
+      "readOnly": true
     },
     {
       "fieldname": "current",

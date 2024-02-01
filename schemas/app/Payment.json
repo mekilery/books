@@ -11,18 +11,7 @@
       "fieldname": "name",
       "fieldtype": "Data",
       "required": true,
-      "readOnly": true,
-      "hidden": true
-    },
-    {
-      "fieldname": "numberSeries",
-      "label": "Number Series",
-      "fieldtype": "Link",
-      "target": "NumberSeries",
-      "create": true,
-      "required": true,
-      "default": "PAY-",
-      "section": "Default"
+      "readOnly": true
     },
     {
       "fieldname": "party",
@@ -30,15 +19,13 @@
       "fieldtype": "Link",
       "target": "Party",
       "create": true,
-      "required": true,
-      "section": "Default"
+      "required": true
     },
     {
       "fieldname": "date",
       "label": "Posting Date",
       "fieldtype": "Date",
-      "required": true,
-      "section": "Default"
+      "required": true
     },
     {
       "fieldname": "paymentType",
@@ -55,27 +42,16 @@
           "label": "Pay"
         }
       ],
-      "required": true,
-      "section": "Default"
+      "required": true
     },
     {
-      "fieldname": "account",
-      "label": "From Account",
+      "fieldname": "numberSeries",
+      "label": "Number Series",
       "fieldtype": "Link",
-      "target": "Account",
+      "target": "NumberSeries",
       "create": true,
       "required": true,
-      "section": "Details"
-    },
-    {
-      "fieldname": "paymentAccount",
-      "label": "To Account",
-      "placeholder": "To Account",
-      "fieldtype": "Link",
-      "target": "Account",
-      "create": true,
-      "required": true,
-      "section": "Details"
+      "default": "PAY-"
     },
     {
       "fieldname": "paymentMethod",
@@ -97,89 +73,72 @@
         }
       ],
       "default": "Cash",
-      "required": true,
-      "section": "Details"
+      "required": true
     },
     {
-      "fieldname": "clearanceDate",
-      "label": "Clearance Date",
-      "placeholder": "Clearance Date",
-      "fieldtype": "Date",
-      "section": "Details"
+      "fieldname": "account",
+      "label": "From Account",
+      "fieldtype": "Link",
+      "target": "Account",
+      "create": true,
+      "required": true
+    },
+    {
+      "fieldname": "paymentAccount",
+      "label": "To Account",
+      "placeholder": "To Account",
+      "fieldtype": "Link",
+      "target": "Account",
+      "create": true,
+      "required": true
     },
     {
       "fieldname": "referenceId",
       "label": "Ref. / Cheque No.",
       "placeholder": "Ref. / Cheque No.",
-      "fieldtype": "Data",
-      "section": "Details"
+      "fieldtype": "Data"
     },
     {
       "fieldname": "referenceDate",
-      "label": "Reference Date",
+      "label": "Ref. Date",
       "placeholder": "Ref. Date",
-      "fieldtype": "Date",
-      "section": "Details"
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "clearanceDate",
+      "label": "Clearance Date",
+      "placeholder": "Clearance Date",
+      "fieldtype": "Date"
     },
     {
       "fieldname": "amount",
       "label": "Amount",
       "fieldtype": "Currency",
-      "required": true,
-      "section": "Amounts"
+      "required": true
     },
     {
       "fieldname": "writeoff",
       "label": "Write Off",
-      "fieldtype": "Currency",
-      "section": "Amounts"
+      "fieldtype": "Currency"
     },
     {
       "fieldname": "amountPaid",
       "label": "Amount Paid",
       "fieldtype": "Currency",
-      "computed": true,
-      "section": "Amounts"
-    },
-    {
-      "fieldname": "taxes",
-      "label": "Taxes",
-      "fieldtype": "Table",
-      "target": "TaxSummary",
-      "readOnly": true,
-      "section": "Amounts"
+      "computed": true
     },
     {
       "fieldname": "for",
       "label": "Payment Reference",
       "fieldtype": "Table",
       "target": "PaymentFor",
-      "required": false,
-      "section": "References"
+      "required": false
     },
     {
       "fieldname": "attachment",
       "placeholder": "Add attachment",
       "label": "Attachment",
-      "fieldtype": "Attachment",
-      "section": "References"
-    },
-    {
-      "fieldname": "referenceType",
-      "label": "Type",
-      "placeholder": "Type",
-      "fieldtype": "Select",
-      "options": [
-        {
-          "value": "SalesInvoice",
-          "label": "Sales"
-        },
-        {
-          "value": "PurchaseInvoice",
-          "label": "Purchase"
-        }
-      ],
-      "hidden": true
+      "fieldtype": "Attachment"
     }
   ],
   "quickEditFields": [

@@ -1,27 +1,49 @@
+import * as assert from 'assert';
+import { DatabaseManager } from 'backend/database/manager';
 import { assertDoesNotThrow } from 'backend/database/tests/helpers';
 import { purchaseItemPartyMap } from 'dummy/helpers';
-import test from 'tape';
-import { getTestDbPath, getTestFyo } from 'tests/helpers';
+import { Fyo } from 'fyo';
+import { DummyAuthDemux } from 'fyo/tests/helpers';
+import 'mocha';
+import { getTestDbPath } from 'tests/helpers';
 import { setupDummyInstance } from '..';
 
-const dbPath = getTestDbPath();
-const fyo = getTestFyo();
+describe('dummy', function () {
+  const dbPath = getTestDbPath();
 
-test('setupDummyInstance', async () => {
-  await assertDoesNotThrow(async () => {
-    await setupDummyInstance(dbPath, fyo, 1, 25);
-  }, 'setup instance failed');
-});
+  let fyo: Fyo;
 
-test('purchaseItemParty Existance', async (t) => {
-  for (const item in purchaseItemPartyMap) {
-    t.ok(await fyo.db.exists('Item', item), `item exists: ${item}`);
+  this.beforeAll(function () {
+    fyo = new Fyo({
+      DatabaseDemux: DatabaseManager,
+      AuthDemux: DummyAuthDemux,
+      isTest: true,
+      isElectron: false,
+    });
+  });
 
-    const party = purchaseItemPartyMap[item];
-    t.ok(await fyo.db.exists('Party', party), `party exists: ${party}`);
-  }
-});
+  this.afterAll(async function () {
+    await fyo.close();
+  });
 
-test.onFinish(async () => {
-  await fyo.close();
+  specify('setupDummyInstance', async function () {
+    await assertDoesNotThrow(async () => {
+      await setupDummyInstance(dbPath, fyo, 1, 25);
+    }, 'setup instance failed');
+
+    for (const item in purchaseItemPartyMap) {
+      assert.strictEqual(
+        await fyo.db.exists('Item', item),
+        true,
+        `not found ${item}`
+      );
+
+      const party = purchaseItemPartyMap[item];
+      assert.strictEqual(
+        await fyo.db.exists('Party', party),
+        true,
+        `not found ${party}`
+      );
+    }
+  }).timeout(120_000);
 });

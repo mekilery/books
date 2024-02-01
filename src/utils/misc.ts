@@ -1,31 +1,20 @@
 import { Fyo } from 'fyo';
-import { ConfigFile } from 'fyo/core/types';
-import { translateSchema } from 'fyo/utils/translation';
-import { cloneDeep } from 'lodash';
+import { ConfigFile, ConfigKeys } from 'fyo/core/types';
 import { DateTime } from 'luxon';
 import { SetupWizard } from 'models/baseModels/SetupWizard/SetupWizard';
 import { ModelNameEnum } from 'models/types';
-import { reports } from 'reports/index';
 import SetupWizardSchema from 'schemas/app/SetupWizard.json';
 import { Schema } from 'schemas/types';
 import { fyo } from 'src/initFyo';
-import { QueryFilter } from 'utils/db/types';
-import { schemaTranslateables } from 'utils/translationHelpers';
-import type { LanguageMap } from 'utils/types';
-import { PeriodKey } from './types';
 
-export function getDatesAndPeriodList(period: PeriodKey): {
-  periodList: DateTime[];
-  fromDate: DateTime;
-  toDate: DateTime;
-} {
+export function getDatesAndPeriodList(
+  period: 'This Year' | 'This Quarter' | 'This Month'
+): { periodList: DateTime[]; fromDate: DateTime; toDate: DateTime } {
   const toDate: DateTime = DateTime.now().plus({ days: 1 });
   let fromDate: DateTime;
 
   if (period === 'This Year') {
     fromDate = toDate.minus({ months: 12 });
-  } else if (period === 'YTD') {
-    fromDate = DateTime.now().startOf('year');
   } else if (period === 'This Quarter') {
     fromDate = toDate.minus({ months: 3 });
   } else if (period === 'This Month') {
@@ -41,10 +30,6 @@ export function getDatesAndPeriodList(period: PeriodKey): {
   while (true) {
     const nextDate = periodList.at(0)!.minus({ months: 1 });
     if (nextDate.toMillis() < fromDate.toMillis()) {
-      if (period === 'YTD') {
-        periodList.unshift(nextDate);
-        break;
-      }
       break;
     }
 
@@ -59,26 +44,22 @@ export function getDatesAndPeriodList(period: PeriodKey): {
   };
 }
 
-export function getSetupWizardDoc(languageMap?: LanguageMap) {
+export async function getSetupWizardDoc() {
   /**
    * This is used cause when setup wizard is running
    * the database isn't yet initialized.
    */
-  const schema = cloneDeep(SetupWizardSchema);
-  if (languageMap) {
-    translateSchema(schema, languageMap, schemaTranslateables);
-  }
-  return fyo.doc.getNewDoc(
+  return await fyo.doc.getNewDoc(
     'SetupWizard',
     {},
     false,
-    schema as Schema,
+    SetupWizardSchema as Schema,
     SetupWizard
   );
 }
 
 export function updateConfigFiles(fyo: Fyo): ConfigFile {
-  const configFiles = fyo.config.get('files', []) as ConfigFile[];
+  const configFiles = fyo.config.get(ConfigKeys.Files, []) as ConfigFile[];
 
   const companyName = fyo.singles.AccountingSettings!.companyName as string;
   const id = fyo.singles.SystemSettings!.instanceId as string;
@@ -97,7 +78,7 @@ export function updateConfigFiles(fyo: Fyo): ConfigFile {
     newFile = configFiles[fileIndex];
   }
 
-  fyo.config.set('files', configFiles);
+  fyo.config.set(ConfigKeys.Files, configFiles);
   return newFile;
 }
 
@@ -116,25 +97,16 @@ export const docsPathMap: Record<string, string | undefined> = {
   [ModelNameEnum.Payment]: 'transactions/payments',
   [ModelNameEnum.JournalEntry]: 'transactions/journal-entries',
 
-  // Inventory
-  [ModelNameEnum.StockMovement]: 'inventory/stock-movement',
-  [ModelNameEnum.Shipment]: 'inventory/shipment',
-  [ModelNameEnum.PurchaseReceipt]: 'inventory/purchase-receipt',
-  StockLedger: 'inventory/stock-ledger',
-  StockBalance: 'inventory/stock-balance',
-  [ModelNameEnum.Batch]: 'inventory/batches',
-
   // Entries
   Entries: 'entries/entries',
   [ModelNameEnum.Party]: 'entries/party',
   [ModelNameEnum.Item]: 'entries/items',
   [ModelNameEnum.Tax]: 'entries/taxes',
-  [ModelNameEnum.PrintTemplate]: 'miscellaneous/print-templates',
 
   // Miscellaneous
   Search: 'miscellaneous/search',
   NumberSeries: 'miscellaneous/number-series',
-  ImportWizard: 'miscellaneous/import-wizard',
+  DataImport: 'miscellaneous/data-import',
   Settings: 'miscellaneous/settings',
   ChartOfAccounts: 'miscellaneous/chart-of-accounts',
 };
@@ -156,40 +128,4 @@ export async function convertFileToDataURL(file: File, type: string) {
   const buffer = await file.arrayBuffer();
   const array = new Uint8Array(buffer);
   return await getDataURL(type, array);
-}
-
-export function getCreateFiltersFromListViewFilters(filters: QueryFilter) {
-  const createFilters: Record<string, string | number | boolean | null> = {};
-
-  for (const key in filters) {
-    let value: typeof filters[string] | undefined | number = filters[key];
-
-    if (Array.isArray(value) && value[0] === 'in' && Array.isArray(value[1])) {
-      value = value[1].filter((v) => v !== 'Both')[0];
-    }
-
-    if (value === undefined || Array.isArray(value)) {
-      continue;
-    }
-
-    createFilters[key] = value;
-  }
-
-  return createFilters;
-}
-
-export function getIsMac() {
-  return navigator.userAgent.indexOf('Mac') !== -1;
-}
-
-export async function getReport(name: keyof typeof reports) {
-  const cachedReport = fyo.store.reports[name];
-  if (cachedReport) {
-    return cachedReport;
-  }
-
-  const report = new reports[name](fyo);
-  await report.initialize();
-  fyo.store.reports[name] = report;
-  return report;
 }

@@ -17,18 +17,16 @@ type ReferenceType =
   | ModelNameEnum.PurchaseInvoice
   | ModelNameEnum.Payment
   | ModelNameEnum.JournalEntry
-  | ModelNameEnum.Shipment
-  | ModelNameEnum.PurchaseReceipt
   | 'All';
 
 export class GeneralLedger extends LedgerReport {
   static title = t`General Ledger`;
   static reportName = 'general-ledger';
-  usePagination = true;
-  loading = false;
+  usePagination: boolean = true;
+  loading: boolean = false;
 
-  ascending = false;
-  reverted = false;
+  ascending: boolean = false;
+  reverted: boolean = false;
   referenceType: ReferenceType = 'All';
   groupBy: 'none' | 'party' | 'account' | 'referenceName' = 'none';
   _rawData: LedgerEntry[] = [];
@@ -37,7 +35,7 @@ export class GeneralLedger extends LedgerReport {
     super(fyo);
   }
 
-  setDefaultFilters() {
+  async setDefaultFilters() {
     if (!this.toDate) {
       this.toDate = DateTime.now().plus({ days: 1 }).toISODate();
       this.fromDate = DateTime.now().minus({ years: 1 }).toISODate();
@@ -239,7 +237,7 @@ export class GeneralLedger extends LedgerReport {
     return { totalDebit, totalCredit };
   }
 
-  _getQueryFilters(): QueryFilter {
+  async _getQueryFilters(): Promise<QueryFilter> {
     const filters: QueryFilter = {};
     const stringFilters = ['account', 'party', 'referenceName'];
 
@@ -274,32 +272,24 @@ export class GeneralLedger extends LedgerReport {
   }
 
   getFilters() {
-    const refTypeOptions = [
-      { label: t`All`, value: 'All' },
-      { label: t`Sales Invoices`, value: 'SalesInvoice' },
-      { label: t`Purchase Invoices`, value: 'PurchaseInvoice' },
-      { label: t`Payments`, value: 'Payment' },
-      { label: t`Journal Entries`, value: 'JournalEntry' },
-    ];
-
-    if (!this.fyo.singles.AccountingSettings?.enableInventory) {
-      refTypeOptions.push(
-        { label: t`Shipment`, value: 'Shipment' },
-        { label: t`Purchase Receipt`, value: 'PurchaseReceipt' }
-      );
-    }
-
     return [
       {
         fieldtype: 'Select',
-        options: refTypeOptions,
+        options: [
+          { label: t`All`, value: 'All' },
+          { label: t`Sales Invoices`, value: 'SalesInvoice' },
+          { label: t`Purchase Invoices`, value: 'PurchaseInvoice' },
+          { label: t`Payments`, value: 'Payment' },
+          { label: t`Journal Entries`, value: 'JournalEntry' },
+        ],
+
         label: t`Ref Type`,
         fieldname: 'referenceType',
         placeholder: t`Ref Type`,
       },
       {
         fieldtype: 'DynamicLink',
-        label: t`Ref. Name`,
+        label: t`Ref Name`,
         references: 'referenceType',
         placeholder: t`Ref Name`,
         emptyMessage: t`Change Ref Type`,

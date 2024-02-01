@@ -1,6 +1,6 @@
 <div align="center" markdown="1">
 
-<img src="https://user-images.githubusercontent.com/29507195/207267672-d422db6c-d89a-4bbe-9822-468a55c15053.png" alt="Frappe Books logo" width="384"/>
+<img src=".github/logo.png" alt="Frappe Books logo" width="384"/>
 
 ---
 
@@ -12,7 +12,7 @@ Free Desktop book-keeping software for small businesses and freelancers.
 
 [frappebooks.com](https://frappebooks.com/)
 
-<img src="https://user-images.githubusercontent.com/29507195/207267857-4ae48890-3fb2-4046-80cf-3256b46c72a0.png" alt="Frappe Books Preview"/>
+<img src="./.github/frappe-books-preview.png" alt="Frappe Books Preview"/>
 
 </div>
 
@@ -60,7 +60,7 @@ a local SQLite file as the database.
 ### Pre-requisites
 
 To get the dev environment up and running you need to first set up Node.js version
-16.14.0 and npm. For this, we suggest using
+16.13.1 and npm. For this, we suggest using
 [nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 Next, you will need to install [yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable).
@@ -87,23 +87,8 @@ To run Frappe Books in development mode (with hot reload, etc):
 
 ```bash
 # start the electron app
-yarn dev
+yarn electron:serve
 ```
-
-**Note: First Boot**
-
-When you run `yarn dev` electron will run immediately but the UI will take a
-couple of seconds to render this because of how dev mode works. Each file is
-individually served by the dev server. And there are many files that have to be
-sent.
-
-**Note: Debug Electron Main Process**
-
-When in dev mode electron runs with the `--inspect` flag which allows an
-external debugger to connect to port 5858. You can use chrome for this by
-visiting `chrome://inspect` while Frappe Books is running in dev mode.
-
-See more [here](https://www.electronjs.org/docs/latest/tutorial/debugging-main-process#external-debuggers).
 
 #### Build
 
@@ -111,20 +96,20 @@ To build Frappe Books and create an installer:
 
 ```bash
 # start the electron app
-yarn build
+yarn electron:build
 ```
 
-**Note: Build Target**
+**Note**
 By default the above command will build for your computer's operating system and
 architecture. To build for other environments (example: for linux from a windows
 computer) check the _Building_ section at
 [electron.build/cli](https://www.electron.build/cli).
 
-So to build for linux you could use the `--linux` flag like so: `yarn build --linux`.
+So to build for linux you could use the `--linux` flag like so: `yarn electron:build --linux`.
 
 ## Contributions and Community
 
-If you want to contribute to Frappe Books, please check our [Contribution Guidelines](https://github.com/frappe/books/blob/master/.github/CONTRIBUTING.md). There are many ways you can contribute even if you don't code:
+There are many ways you can contribute even if you don't code:
 
 1. If you find any issues, no matter how small (even typos), you can [raise an issue](https://github.com/frappe/books/issues/new) to inform us.
 2. You can help us with language support by [contributing translations](https://github.com/frappe/books/wiki/Contributing-Translations).
@@ -136,30 +121,24 @@ If you want to contribute code then you can fork this repo, make changes and rai
 
 ## Links
 
-- [Telegram Group](https://t.me/frappebooks): Used for discussions and decisions regarding everything Frappe Books.
+- [Telegram Group](https://t.me/frappebooks): Used for discussions regarding features, issues, changes, etc. This group is also be used to make decisions regarding project direction.
+- [Project Board](https://github.com/frappe/books/projects/1): Roadmap that is updated with acceptable latency.
 - [GitHub Discussions](https://github.com/frappe/books/discussions): Used for discussions around a specific topic.
 - [Frappe Books Blog](https://tech.frappebooks.com/): Sporadically updated dev blog regarding the development of this project.
 
-## Maintainers
-
-Frappe Books is currently being maintained by [Mildred Ki'Lya](https://github.com/mildred) and [Isaac-GC](https://github.com/Isaac-GC).
-
 ## Translation Contributors
 
-| Language           | Contributors                                                                                                                                                     |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| French             | [DeepL](https://www.deepl.com/), [mael-chouteau](https://github.com/mael-chouteau), [joandreux](https://github.com/joandreux)                                    |
-| German             | [DeepL](https://www.deepl.com/), [barredterra](https://github.com/barredterra), [promexio](https://github.com/promexio), [C2H6-383](https://github.com/C2H6-383) |
-| Portuguese         | [DeepL](https://www.deepl.com/)                                                                                                                                  |
-| Arabic             | [taha2002](https://github.com/taha2002), [Faridget](https://github.com/faridget)                                                                                 |
-| Catalan            | Dídac E. Jiménez                                                                                                                                                 |
-| Dutch              | [FastAct](https://github.com/FastAct)                                                                                                                            |
-| Spanish            | [talmax1124](https://github.com/talmax1124), [delbertf](https://github.com/delbertf)                                                                             |
-| Gujarati           | [dhruvilxcode](https://github.com/dhruvilxcode), [4silvertooth](https://github.com/4silvertooth)                                                                 |
-| Korean             | [Isaac-Kwon](https://github.com/Isaac-Kwon)                                                                                                                      |
-| Simplified Chinese | [wcxu21](https://github.com/wcxu21), [wolone](https://github.com/wolone)                                                                                         |
-| Swedish            | [papplo](https://github.com/papplo)                                                                                                                              |
-| Turkish            | Eyuq, [XTechnology-TR](https://github.com/XTechnology-TR)                                                                                                        |
+| Language   | Contributors                                                                       |
+| ---------- | ---------------------------------------------------------------------------------- |
+| French     | [DeepL](https://www.deepl.com/), [mael-chouteau](https://github.com/mael-chouteau) |
+| German     | [DeepL](https://www.deepl.com/), [barredterra](https://github.com/barredterra)     |
+| Portuguese | [DeepL](https://www.deepl.com/)                                                    |
+| Arabic     | [taha2002](https://github.com/taha2002)                                            |
+| Catalan    | Dídac E. Jiménez                                                                   |
+| Dutch      | [FastAct](https://github.com/FastAct)                                              |
+| Spanish    | [talmax1124](https://github.com/talmax1124)                                        |
+| Gujarati   | [dhruvilxcode](https://github.com/dhruvilxcode)                                    |
+| Korean     | [Isaac-Kwon](https://github.com/Isaac-Kwon)                                        |
 
 ## License
 

@@ -4,7 +4,6 @@ import { ModelNameEnum } from 'models/types';
 import { Report } from 'reports/Report';
 import { GroupedMap, LedgerEntry, RawLedgerEntry } from 'reports/types';
 import { QueryFilter } from 'utils/db/types';
-import { safeParseFloat, safeParseInt } from 'utils/index';
 import getCommonExportActions from './commonExporter';
 
 type GroupByKey = 'account' | 'party' | 'referenceName';
@@ -14,7 +13,7 @@ export abstract class LedgerReport extends Report {
   static reportName = 'general-ledger';
 
   _rawData: LedgerEntry[] = [];
-  shouldRefresh = false;
+  shouldRefresh: boolean = false;
 
   constructor(fyo: Fyo) {
     super(fyo);
@@ -95,18 +94,18 @@ export abstract class LedgerReport extends Report {
       {
         fields,
         filters,
-        orderBy: ['date', 'created'],
+        orderBy: 'date',
         order: this.ascending ? 'asc' : 'desc',
       }
     )) as RawLedgerEntry[];
 
     this._rawData = entries.map((entry) => {
       return {
-        name: safeParseInt(entry.name),
+        name: parseInt(entry.name),
         account: entry.account,
         date: new Date(entry.date),
-        debit: Math.abs(safeParseFloat(entry.debit)),
-        credit: Math.abs(safeParseFloat(entry.credit)),
+        debit: parseFloat(entry.debit),
+        credit: parseFloat(entry.credit),
         balance: 0,
         referenceType: entry.referenceType,
         referenceName: entry.referenceName,
@@ -117,7 +116,7 @@ export abstract class LedgerReport extends Report {
     });
   }
 
-  abstract _getQueryFilters(): QueryFilter | Promise<QueryFilter>;
+  abstract _getQueryFilters(): Promise<QueryFilter>;
 
   getActions(): Action[] {
     return getCommonExportActions(this);

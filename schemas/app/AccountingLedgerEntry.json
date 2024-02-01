@@ -1,33 +1,15 @@
 {
   "name": "AccountingLedgerEntry",
   "label": "Accounting Ledger Entry",
-  "create": false,
   "isSingle": false,
   "isChild": false,
   "naming": "autoincrement",
   "fields": [
     {
-      "label": "Entry No.",
-      "fieldname": "name",
-      "fieldtype": "Data",
-      "required": true,
-      "readOnly": true,
-      "section": "Default"
-    },
-    {
       "fieldname": "date",
       "label": "Date",
       "fieldtype": "Datetime",
-      "readOnly": true,
-      "section": "Default"
-    },
-    {
-      "fieldname": "party",
-      "label": "Party",
-      "fieldtype": "Link",
-      "target": "Party",
-      "readOnly": true,
-      "section": "Default"
+      "readOnly": true
     },
     {
       "fieldname": "account",
@@ -35,53 +17,53 @@
       "fieldtype": "Link",
       "target": "Account",
       "required": true,
-      "readOnly": true,
-      "section": "Default"
+      "readOnly": true
+    },
+    {
+      "fieldname": "party",
+      "label": "Party",
+      "fieldtype": "Link",
+      "target": "Party",
+      "readOnly": true
     },
     {
       "fieldname": "debit",
       "label": "Debit",
       "fieldtype": "Currency",
-      "readOnly": true,
-      "section": "Details"
+      "readOnly": true
     },
     {
       "fieldname": "credit",
       "label": "Credit",
       "fieldtype": "Currency",
-      "readOnly": true,
-      "section": "Details"
+      "readOnly": true
     },
     {
       "fieldname": "referenceType",
       "label": "Ref. Type",
       "fieldtype": "Data",
-      "readOnly": true,
-      "section": "Reference"
+      "readOnly": true
     },
     {
       "fieldname": "referenceName",
       "label": "Ref. Name",
       "fieldtype": "DynamicLink",
       "references": "referenceType",
-      "readOnly": true,
-      "section": "Reference"
+      "readOnly": true
     },
     {
       "fieldname": "reverted",
       "label": "Reverted",
       "fieldtype": "Check",
       "default": false,
-      "readOnly": true,
-      "section": "Reference"
+      "readOnly": true
     },
     {
       "fieldname": "reverts",
       "label": "Reverts",
       "fieldtype": "Link",
       "target": "AccountingLedgerEntry",
-      "readOnly": true,
-      "section": "Reference"
+      "readOnly": true
     }
   ],
   "quickEditFields": [

@@ -29,10 +29,10 @@ export class JournalEntryAccount extends Doc {
 
   formulas: FormulaMap = {
     debit: {
-      formula: () => this.getAutoDebitCredit('debit'),
+      formula: async () => this.getAutoDebitCredit('debit'),
     },
     credit: {
-      formula: () => this.getAutoDebitCredit('credit'),
+      formula: async () => this.getAutoDebitCredit('credit'),
     },
   };
 

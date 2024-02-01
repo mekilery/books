@@ -4,7 +4,7 @@
       class="flex items-center"
       :class="spaceBetween ? 'justify-between' : ''"
     >
-      <div v-if="showLabel && !labelRight" class="me-3" :class="labelClasses">
+      <div class="mr-3" :class="labelClasses" v-if="showLabel && !labelRight">
         {{ df.label }}
       </div>
       <div
@@ -12,7 +12,7 @@
         :class="isReadOnly ? 'cursor-default' : 'cursor-pointer'"
       >
         <svg
-          v-if="value"
+          v-if="checked"
           width="14"
           height="14"
           viewBox="0 0 14 14"
@@ -60,26 +60,25 @@
         <input
           ref="input"
           type="checkbox"
-          :checked="getChecked(value)"
+          :checked="value"
           :readonly="isReadOnly"
-          :tabindex="isReadOnly ? '-1' : '0'"
-          @change="onChange"
+          @change="(e) => !isReadOnly && triggerChange(e.target.checked)"
           @focus="(e) => $emit('focus', e)"
         />
       </div>
-      <div v-if="showLabel && labelRight" class="ms-3" :class="labelClasses">
+      <div class="ml-3" :class="labelClasses" v-if="showLabel && labelRight">
         {{ df.label }}
       </div>
     </label>
   </div>
 </template>
-<script lang="ts">
-import { defineComponent } from 'vue';
-import Base from './Base.vue';
+<script>
+import Base from './Base';
 
-export default defineComponent({
+export default {
   name: 'Check',
   extends: Base,
+  emits: ['focus'],
   props: {
     spaceBetween: {
       default: false,
@@ -91,7 +90,6 @@ export default defineComponent({
     },
     labelClass: String,
   },
-  emits: ['focus'],
   data() {
     return {
       offBorderColor: 'rgba(17, 43, 66, 0.201322)',
@@ -105,27 +103,13 @@ export default defineComponent({
         return this.labelClass;
       }
 
-      return 'text-gray-600 text-base';
+      return 'text-gray-600 text-sm';
+    },
+    checked() {
+      return this.value;
     },
   },
-  methods: {
-    getChecked(value: unknown) {
-      return Boolean(value);
-    },
-    onChange(e: Event) {
-      if (this.isReadOnly) {
-        return;
-      }
-
-      const target = e.target;
-      if (!(target instanceof HTMLInputElement)) {
-        return;
-      }
-
-      this.triggerChange(target.checked);
-    },
-  },
-});
+};
 </script>
 
 <style scoped>

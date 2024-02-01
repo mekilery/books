@@ -9,7 +9,7 @@ import {
   AccountReport,
   ACC_BAL_WIDTH,
   ACC_NAME_WIDTH,
-  convertAccountRootNodesToAccountList,
+  convertAccountRootNodeToAccountList,
   getFiscalEndpoints,
 } from 'reports/AccountReport';
 import {
@@ -35,8 +35,8 @@ export class TrialBalance extends AccountReport {
 
   fromDate?: string;
   toDate?: string;
-  hideGroupAmounts = false;
-  loading = false;
+  hideGroupAmounts: boolean = false;
+  loading: boolean = false;
 
   _rawData: LedgerEntry[] = [];
   _dateRanges?: DateRange[];
@@ -65,21 +65,20 @@ export class TrialBalance extends AccountReport {
 
     const rootTypeRows: RootTypeRow[] = this.rootTypes
       .map((rootType) => {
-        const rootNodes = this.getRootNodes(rootType, accountTree)!;
-        const rootList = convertAccountRootNodesToAccountList(rootNodes);
+        const rootNode = this.getRootNode(rootType, accountTree)!;
+        const rootList = convertAccountRootNodeToAccountList(rootNode);
         return {
           rootType,
-          rootNodes,
+          rootNode,
           rows: this.getReportRowsFromAccountList(rootList),
         };
       })
-      .filter((row) => !!(row.rootNodes && row.rootNodes.length));
+      .filter((row) => !!row.rootNode);
 
     this.reportData = await this.getReportDataFromRows(rootTypeRows);
     this.loading = false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async getReportDataFromRows(
     rootTypeRows: RootTypeRow[]
   ): Promise<ReportData> {
@@ -94,7 +93,6 @@ export class TrialBalance extends AccountReport {
     return reportData;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async _getGroupedByDateRanges(
     map: GroupedMap
   ): Promise<AccountNameValueMapMap> {
@@ -110,11 +108,11 @@ export class TrialBalance extends AccountReport {
         const key = this._getRangeMapKey(entry);
         if (key === null) {
           throw new ValueError(
-            `invalid entry in trial balance ${entry.date?.toISOString() ?? ''}`
+            `invalid entry in trial balance ${entry.date?.toISOString()}`
           );
         }
 
-        const map = valueMap.get(key);
+        const map = valueMap.get(key!);
         const totalCredit = map?.credit ?? 0;
         const totalDebit = map?.debit ?? 0;
 
@@ -190,7 +188,6 @@ export class TrialBalance extends AccountReport {
     } as ReportRow;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async _getQueryFilters(): Promise<QueryFilter> {
     const filters: QueryFilter = {};
     filters.reverted = false;
@@ -200,7 +197,7 @@ export class TrialBalance extends AccountReport {
   async setDefaultFilters(): Promise<void> {
     if (!this.toDate || !this.fromDate) {
       const { year } = DateTime.now();
-      const endpoints = await getFiscalEndpoints(year + 1, year, this.fyo);
+      const endpoints = await getFiscalEndpoints(year + 1, year);
 
       this.fromDate = endpoints.fromDate;
       this.toDate = DateTime.fromISO(endpoints.toDate)

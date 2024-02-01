@@ -5,16 +5,15 @@
       "fieldname": "pos",
       "label": "Place of Supply",
       "fieldtype": "AutoComplete",
-      "placeholder": "Place of Supply",
-      "section": "Miscellaneous"
+      "placeholder": "Place of Supply"
     }
   ],
   "quickEditFields": [
     "addressLine1",
     "addressLine2",
     "city",
-    "country",
     "state",
+    "country",
     "postalCode",
     "pos"
   ]

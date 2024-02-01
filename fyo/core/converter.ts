@@ -3,8 +3,9 @@ import { Doc } from 'fyo/model/doc';
 import { isPesa } from 'fyo/utils';
 import { ValueError } from 'fyo/utils/errors';
 import { DateTime } from 'luxon';
+import { Money } from 'pesa';
 import { Field, FieldTypeEnum, RawValue, TargetField } from 'schemas/types';
-import { getIsNullOrUndef, safeParseFloat, safeParseInt } from 'utils';
+import { getIsNullOrUndef } from 'utils';
 import { DatabaseHandler } from './dbHandler';
 import { Attachment, DocValue, DocValueMap, RawValueMap } from './types';
 
@@ -101,7 +102,7 @@ export class Converter {
   }
 
   #toDocValueMap(schemaName: string, rawValueMap: RawValueMap): DocValueMap {
-    const fieldValueMap = this.db.fieldMap[schemaName];
+    const fieldValueMap = this.db.fieldValueMap[schemaName];
     const docValueMap: DocValueMap = {};
 
     for (const fieldname in rawValueMap) {
@@ -129,7 +130,7 @@ export class Converter {
   }
 
   #toRawValueMap(schemaName: string, docValueMap: DocValueMap): RawValueMap {
-    const fieldValueMap = this.db.fieldMap[schemaName];
+    const fieldValueMap = this.db.fieldValueMap[schemaName];
     const rawValueMap: RawValueMap = {};
 
     for (const fieldname in docValueMap) {
@@ -144,7 +145,7 @@ export class Converter {
             return this.#toRawValueMap(parentSchemaName, value.getValidDict());
           }
 
-          return this.#toRawValueMap(parentSchemaName, value);
+          return this.#toRawValueMap(parentSchemaName, value as DocValueMap);
         });
       } else {
         rawValueMap[fieldname] = Converter.toRawValue(
@@ -176,7 +177,7 @@ function toDocString(value: RawValue, field: Field) {
 }
 
 function toDocDate(value: RawValue, field: Field) {
-  if ((value as unknown) instanceof Date) {
+  if ((value as any) instanceof Date) {
     return value;
   }
 
@@ -184,11 +185,11 @@ function toDocDate(value: RawValue, field: Field) {
     return null;
   }
 
-  if (typeof value !== 'string') {
+  if (typeof value !== 'number' && typeof value !== 'string') {
     throwError(value, field, 'doc');
   }
 
-  const date = DateTime.fromISO(value).toJSDate();
+  const date = new Date(value);
   if (date.toString() === 'Invalid Date') {
     throwError(value, field, 'doc');
   }
@@ -230,7 +231,7 @@ function toDocInt(value: RawValue, field: Field): number {
   }
 
   if (typeof value === 'string') {
-    value = safeParseInt(value);
+    value = parseInt(value);
   }
 
   return toDocFloat(value, field);
@@ -246,7 +247,7 @@ function toDocFloat(value: RawValue, field: Field): number {
   }
 
   if (typeof value === 'string') {
-    value = safeParseFloat(value);
+    value = parseFloat(value);
   }
 
   if (value === null) {
@@ -266,7 +267,7 @@ function toDocCheck(value: RawValue, field: Field): boolean {
   }
 
   if (typeof value === 'string') {
-    return !!safeParseFloat(value);
+    return !!parseFloat(value);
   }
 
   if (typeof value === 'number') {
@@ -282,19 +283,21 @@ function toDocAttachment(value: RawValue, field: Field): null | Attachment {
   }
 
   if (typeof value !== 'string') {
+    console.log('being thrown doc1', typeof value, value);
     throwError(value, field, 'doc');
   }
 
   try {
-    return (JSON.parse(value) as Attachment) || null;
+    return JSON.parse(value) || null;
   } catch {
+    console.log('being thrown doc2', typeof value, value);
     throwError(value, field, 'doc');
   }
 }
 
 function toRawCurrency(value: DocValue, fyo: Fyo, field: Field): string {
   if (isPesa(value)) {
-    return value.store;
+    return (value as Money).store;
   }
 
   if (getIsNullOrUndef(value)) {
@@ -314,7 +317,7 @@ function toRawCurrency(value: DocValue, fyo: Fyo, field: Field): string {
 
 function toRawInt(value: DocValue, field: Field): number {
   if (typeof value === 'string') {
-    return safeParseInt(value);
+    return parseInt(value);
   }
 
   if (getIsNullOrUndef(value)) {
@@ -322,7 +325,7 @@ function toRawInt(value: DocValue, field: Field): number {
   }
 
   if (typeof value === 'number') {
-    return Math.floor(value);
+    return Math.floor(value as number);
   }
 
   throwError(value, field, 'raw');
@@ -330,7 +333,7 @@ function toRawInt(value: DocValue, field: Field): number {
 
 function toRawFloat(value: DocValue, field: Field): number {
   if (typeof value === 'string') {
-    return safeParseFloat(value);
+    return parseFloat(value);
   }
 
   if (getIsNullOrUndef(value)) {
@@ -345,23 +348,12 @@ function toRawFloat(value: DocValue, field: Field): number {
 }
 
 function toRawDate(value: DocValue, field: Field): string | null {
-  if (value === null) {
+  const dateTime = toRawDateTime(value, field);
+  if (dateTime === null) {
     return null;
   }
 
-  if (typeof value === 'string' || typeof value === 'number') {
-    value = new Date(value);
-  }
-
-  if (value instanceof Date) {
-    return DateTime.fromJSDate(value).toISODate();
-  }
-
-  if (value instanceof DateTime) {
-    return value.toISODate();
-  }
-
-  throwError(value, field, 'raw');
+  return dateTime.split('T')[0];
 }
 
 function toRawDateTime(value: DocValue, field: Field): string | null {
@@ -374,11 +366,11 @@ function toRawDateTime(value: DocValue, field: Field): string | null {
   }
 
   if (value instanceof Date) {
-    return value.toISOString();
+    return (value as Date).toISOString();
   }
 
   if (value instanceof DateTime) {
-    return value.toJSDate().toISOString();
+    return (value as DateTime).toISO();
   }
 
   throwError(value, field, 'raw');
@@ -437,13 +429,14 @@ function toRawAttachment(value: DocValue, field: Field): null | string {
     return JSON.stringify(value);
   }
 
+  console.log('being thrown raw', typeof value, value);
   throwError(value, field, 'raw');
 }
 
 function throwError<T>(value: T, field: Field, type: 'raw' | 'doc'): never {
   throw new ValueError(
-    `invalid ${type} conversion '${String(
-      value
-    )}' of type ${typeof value} found, field: ${JSON.stringify(field)}`
+    `invalid ${type} conversion '${value}' of type ${typeof value} found, field: ${JSON.stringify(
+      field
+    )}`
   );
 }

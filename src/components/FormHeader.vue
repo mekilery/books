@@ -8,12 +8,10 @@
       justify-between
       h-row-large
       items-center
-      flex-shrink-0
     "
   >
-    <h1 v-if="formTitle">{{ formTitle }}</h1>
-    <slot />
-    <p v-if="formSubTitle" class="text-gray-600">
+    <h1>{{ formTitle }}</h1>
+    <p class="text-gray-600">
       {{ formSubTitle }}
     </p>
   </div>

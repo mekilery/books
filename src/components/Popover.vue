@@ -3,29 +3,18 @@
     <div class="h-full">
       <slot
         name="target"
-        :toggle-popover="togglePopover"
-        :handle-blur="handleBlur"
+        :togglePopover="togglePopover"
+        :handleBlur="handleBlur"
       ></slot>
     </div>
-    <Transition>
-      <div
-        v-show="isOpen"
-        ref="popover"
-        :class="popoverClass"
-        class="
-          bg-white
-          rounded-md
-          border
-          shadow-lg
-          popover-container
-          relative
-          z-10
-        "
-        :style="{ 'transition-delay': `${isOpen ? entryDelay : exitDelay}ms` }"
-      >
-        <slot name="content" :toggle-popover="togglePopover"></slot>
-      </div>
-    </Transition>
+    <div
+      ref="popover"
+      :class="popoverClass"
+      class="bg-white rounded border shadow-lg popover-container relative z-10"
+      v-show="isOpen"
+    >
+      <slot name="content" :togglePopover="togglePopover"></slot>
+    </div>
   </div>
 </template>
 
@@ -35,25 +24,17 @@ import { nextTick } from 'vue';
 
 export default {
   name: 'Popover',
+  emits: ['open', 'close'],
   props: {
     showPopup: {
-      type: [Boolean, null],
       default: null,
     },
     right: Boolean,
-    entryDelay: { type: Number, default: 0 },
-    exitDelay: { type: Number, default: 0 },
     placement: {
       type: String,
       default: 'bottom-start',
     },
     popoverClass: [String, Object, Array],
-  },
-  emits: ['open', 'close'],
-  data() {
-    return {
-      isOpen: false,
-    };
   },
   watch: {
     showPopup(value) {
@@ -64,6 +45,11 @@ export default {
         this.close();
       }
     },
+  },
+  data() {
+    return {
+      isOpen: false,
+    };
   },
   mounted() {
     this.listener = (e) => {
@@ -133,14 +119,3 @@ export default {
   },
 };
 </script>
-<style scoped>
-.v-enter-active,
-.v-leave-active {
-  transition: opacity 150ms ease-out;
-}
-
-.v-enter-from,
-.v-leave-to {
-  opacity: 0;
-}
-</style>

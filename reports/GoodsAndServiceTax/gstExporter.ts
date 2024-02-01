@@ -4,12 +4,12 @@ import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import { codeStateMap } from 'regional/in';
 import { ExportExtention } from 'reports/types';
-import { showDialog } from 'src/utils/interactive';
+import { getSavePath } from 'src/utils/ipcCalls';
+import { showMessageDialog } from 'src/utils/ui';
 import { invertMap } from 'utils';
 import { getCsvData, saveExportData } from '../commonExporter';
 import { BaseGSTR } from './BaseGSTR';
 import { TransferTypeEnum } from './types';
-import { getSavePath } from 'src/utils/ui';
 
 const GST = {
   'GST-0': 0,
@@ -162,7 +162,7 @@ async function exportReport(extention: ExportExtention, report: BaseGSTR) {
     return;
   }
 
-  await saveExportData(data, filePath);
+  await saveExportData(data, filePath, report.fyo);
   report.fyo.telemetry.log(Verb.Exported, report.reportName, { extention });
 }
 
@@ -175,10 +175,9 @@ async function getCanExport(report: BaseGSTR) {
     return true;
   }
 
-  await showDialog({
-    title: report.fyo.t`Cannot Export`,
-    detail: report.fyo.t`Please set GSTIN in General Settings.`,
-    type: 'error',
+  showMessageDialog({
+    message: 'Cannot Export',
+    detail: 'Please set GSTIN in General Settings.',
   });
 
   return false;
@@ -204,7 +203,7 @@ export async function getGstrJsonData(report: BaseGSTR): Promise<string> {
   } else if (transferType === TransferTypeEnum.B2CL) {
     gstData.b2cl = await generateB2clData(report);
   } else if (transferType === TransferTypeEnum.B2CS) {
-    gstData.b2cs = generateB2csData(report);
+    gstData.b2cs = await generateB2csData(report);
   }
 
   return JSON.stringify(gstData);

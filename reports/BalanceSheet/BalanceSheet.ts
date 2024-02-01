@@ -5,7 +5,7 @@ import {
 } from 'models/baseModels/Account/types';
 import {
   AccountReport,
-  convertAccountRootNodesToAccountList,
+  convertAccountRootNodeToAccountList,
 } from 'reports/AccountReport';
 import { ReportData, RootTypeRow } from 'reports/types';
 import { getMapFromList } from 'utils';
@@ -13,7 +13,7 @@ import { getMapFromList } from 'utils';
 export class BalanceSheet extends AccountReport {
   static title = t`Balance Sheet`;
   static reportName = 'balance-sheet';
-  loading = false;
+  loading: boolean = false;
 
   get rootTypes(): AccountRootType[] {
     return [
@@ -44,25 +44,25 @@ export class BalanceSheet extends AccountReport {
 
     const rootTypeRows: RootTypeRow[] = this.rootTypes
       .map((rootType) => {
-        const rootNodes = this.getRootNodes(rootType, accountTree)!;
-        const rootList = convertAccountRootNodesToAccountList(rootNodes);
+        const rootNode = this.getRootNode(rootType, accountTree)!;
+        const rootList = convertAccountRootNodeToAccountList(rootNode);
         return {
           rootType,
-          rootNodes,
+          rootNode,
           rows: this.getReportRowsFromAccountList(rootList),
         };
       })
-      .filter((row) => !!row.rootNodes.length);
+      .filter((row) => !!row.rootNode);
 
-    this.reportData = this.getReportDataFromRows(
+    this.reportData = await this.getReportDataFromRows(
       getMapFromList(rootTypeRows, 'rootType')
     );
     this.loading = false;
   }
 
-  getReportDataFromRows(
+  async getReportDataFromRows(
     rootTypeRows: Record<AccountRootType, RootTypeRow | undefined>
-  ): ReportData {
+  ): Promise<ReportData> {
     const typeNameList = [
       {
         rootType: AccountRootTypeEnum.Asset,
@@ -88,8 +88,8 @@ export class BalanceSheet extends AccountReport {
 
       reportData.push(...row.rows);
 
-      if (row.rootNodes.length) {
-        const totalNode = this.getTotalNode(row.rootNodes, totalName);
+      if (row.rootNode) {
+        const totalNode = await this.getTotalNode(row.rootNode, totalName);
         const totalRow = this.getRowFromAccountListNode(totalNode);
         reportData.push(totalRow);
       }

@@ -16,7 +16,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { parseCSV } from 'utils/csvParser';
 import { LanguageMap } from 'utils/types';
-import fetch from 'node-fetch';
+
+const fetch = require('node-fetch').default;
 
 const VALENTINES_DAY = 1644796800000;
 
@@ -99,7 +100,7 @@ async function fetchContentsFromApi(code: string) {
     return null;
   }
 
-  const resJson = (await res.json()) as { content: string };
+  const resJson = await res.json();
   return Buffer.from(resJson.content, 'base64').toString();
 }
 
@@ -137,9 +138,7 @@ async function getLastUpdated(code: string): Promise<Date> {
     return new Date(VALENTINES_DAY);
   }
 
-  const resJson = (await res.json()) as {
-    commit: { author: { date: string } };
-  }[];
+  const resJson = await res.json();
   try {
     return new Date(resJson[0].commit.author.date);
   } catch {
@@ -159,7 +158,7 @@ async function getTranslationFilePath(code: string) {
     /**
      * This will be used for in Development mode
      */
-    filePath = path.join(__dirname, `../../translations/${code}.csv`);
+    filePath = path.join(__dirname, `../translations/${code}.csv`);
   }
 
   try {
@@ -188,7 +187,7 @@ async function storeFile(code: string, contents: string) {
 
 async function errorHandledFetch(url: string) {
   try {
-    return await fetch(url);
+    return (await fetch(url)) as Response;
   } catch {
     return null;
   }

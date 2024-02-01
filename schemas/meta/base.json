@@ -6,32 +6,28 @@
       "label": "Created By",
       "fieldtype": "Data",
       "required": true,
-      "meta": true,
-      "section": "System"
+      "meta": true
     },
     {
       "fieldname": "modifiedBy",
       "label": "Modified By",
       "fieldtype": "Data",
       "required": true,
-      "meta": true,
-      "section": "System"
+      "meta": true
     },
     {
       "fieldname": "created",
       "label": "Created",
       "fieldtype": "Datetime",
       "required": true,
-      "meta": true,
-      "section": "System"
+      "meta": true
     },
     {
       "fieldname": "modified",
       "label": "Modified",
       "fieldtype": "Datetime",
       "required": true,
-      "meta": true,
-      "section": "System"
+      "meta": true
     }
   ]
 }

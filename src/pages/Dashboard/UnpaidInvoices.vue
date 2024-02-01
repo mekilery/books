@@ -1,226 +1,208 @@
 <template>
-  <div class="flex-col justify-between w-full p-4">
-    <!-- Title and Period Selector -->
-    <SectionHeader>
-      <template #title>{{ title }}</template>
-      <template #action>
-        <PeriodSelector :value="period" @change="(value) => (period = value)" />
-      </template>
-    </SectionHeader>
+  <div class="flex">
+    <div
+      v-for="(invoice, i) in invoices"
+      class="flex-col justify-between w-full p-4"
+      :class="i === 0 ? 'border-r' : ''"
+      :key="invoice.title"
+    >
+      <!-- Title and Period Selector -->
+      <SectionHeader>
+        <template #title>{{ invoice.title }}</template>
+        <template #action>
+          <PeriodSelector
+            v-if="invoice.hasData"
+            :value="$data[invoice.periodKey]"
+            @change="(value) => ($data[invoice.periodKey] = value)"
+          />
+          <Button
+            v-else
+            :icon="true"
+            type="primary"
+            @click="newInvoice(invoice)"
+          >
+            <feather-icon name="plus" class="w-4 h-4 text-white" />
+          </Button>
+        </template>
+      </SectionHeader>
 
-    <!-- Widget Body -->
-    <div class="mt-4">
-      <!-- Paid & Unpaid Amounts -->
-      <div class="flex justify-between">
-        <!-- Paid -->
-        <div
-          class="text-sm font-medium"
-          :class="{
-            'bg-gray-200 text-gray-200 rounded': !count,
-            'cursor-pointer': paidCount > 0,
-          }"
-          :title="paidCount > 0 ? t`View Paid Invoices` : ''"
-          @click="() => routeToInvoices('paid')"
-        >
-          {{ fyo.format(paid, 'Currency') }}
-          <span :class="{ 'text-gray-900 font-normal': count }">{{
-            t`Paid`
-          }}</span>
+      <!-- Widget Body -->
+      <div class="mt-4">
+        <!-- Paid & Unpaid Amounts -->
+        <div class="flex justify-between">
+          <!-- Paid -->
+          <div
+            class="text-sm font-medium"
+            :class="{ 'bg-gray-200 text-gray-200 rounded': !invoice.count }"
+          >
+            {{ fyo.format(invoice.paid, 'Currency') }}
+            <span :class="{ 'text-gray-900 font-normal': invoice.count }">{{
+              t`Paid`
+            }}</span>
+          </div>
+
+          <!-- Unpaid -->
+          <div
+            class="text-sm font-medium"
+            :class="{ 'bg-gray-200 text-gray-200 rounded': !invoice.count }"
+          >
+            {{ fyo.format(invoice.unpaid, 'Currency') }}
+            <span :class="{ 'text-gray-900 font-normal': invoice.count }">{{
+              t`Unpaid`
+            }}</span>
+          </div>
         </div>
 
-        <!-- Unpaid -->
+        <!-- Widget Bar -->
         <div
-          class="text-sm font-medium"
-          :class="{
-            'bg-gray-200 text-gray-200 rounded': !count,
-            'cursor-pointer': unpaidCount > 0,
-          }"
-          :title="unpaidCount > 0 ? t`View Unpaid Invoices` : ''"
-          @click="() => routeToInvoices('unpaid')"
+          class="mt-2 relative rounded overflow-hidden"
+          @mouseenter="idx = i"
+          @mouseleave="idx = -1"
         >
-          {{ fyo.format(unpaid, 'Currency') }}
-          <span :class="{ 'text-gray-900 font-normal': count }">{{
-            t`Unpaid`
-          }}</span>
+          <div
+            class="w-full h-4"
+            :class="
+              invoice.count && invoice.color == 'blue'
+                ? 'bg-blue-200'
+                : invoice.hasData
+                ? 'bg-pink-200'
+                : 'bg-gray-200'
+            "
+          ></div>
+          <div
+            class="absolute inset-0 h-4"
+            :class="
+              invoice.count && invoice.color == 'blue'
+                ? 'bg-blue-500'
+                : invoice.hasData
+                ? 'bg-pink-500'
+                : 'bg-gray-400'
+            "
+            :style="`width: ${invoice.barWidth}%`"
+          ></div>
         </div>
-      </div>
-
-      <!-- Widget Bar -->
-      <div
-        class="mt-2 relative rounded overflow-hidden"
-        @mouseenter="show = true"
-        @mouseleave="show = false"
-      >
-        <div class="w-full h-4" :class="unpaidColor"></div>
-        <div
-          class="absolute inset-0 h-4"
-          :class="paidColor"
-          :style="`width: ${barWidth}%`"
-        ></div>
       </div>
     </div>
     <MouseFollower
-      v-if="hasData"
+      v-if="invoices[0].hasData || invoices[1].hasData"
       :offset="15"
-      :show="show"
+      :show="idx >= 0"
       placement="top"
-      class="text-sm shadow-md px-2 py-1 bg-white text-gray-900 border-s-4"
-      :style="{ borderColor: colors }"
+      class="text-sm shadow-md px-2 py-1 bg-white text-gray-900 border-l-4"
+      :style="{ borderColor: colors[idx] }"
     >
       <div class="flex justify-between gap-4">
         <p>{{ t`Paid` }}</p>
-        <p class="font-semibold">{{ paidCount ?? 0 }}</p>
+        <p class="font-semibold">{{ invoices[idx]?.paidCount ?? 0 }}</p>
       </div>
-      <div v-if="unpaidCount > 0" class="flex justify-between gap-4">
+      <div
+        v-if="invoices[idx]?.unpaidCount > 0"
+        class="flex justify-between gap-4"
+      >
         <p>{{ t`Unpaid` }}</p>
-        <p class="font-semibold">{{ unpaidCount ?? 0 }}</p>
+        <p class="font-semibold">{{ invoices[idx]?.unpaidCount ?? 0 }}</p>
       </div>
     </MouseFollower>
   </div>
 </template>
-<script lang="ts">
+<script>
 import { t } from 'fyo';
-import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
+import Button from 'src/components/Button.vue';
 import MouseFollower from 'src/components/MouseFollower.vue';
 import { fyo } from 'src/initFyo';
 import { uicolors } from 'src/utils/colors';
 import { getDatesAndPeriodList } from 'src/utils/misc';
-import { PeriodKey } from 'src/utils/types';
 import { routeTo } from 'src/utils/ui';
-import { safeParseFloat } from 'utils/index';
-import { PropType, defineComponent } from 'vue';
-import BaseDashboardChart from './BaseDashboardChart.vue';
 import PeriodSelector from './PeriodSelector.vue';
 import SectionHeader from './SectionHeader.vue';
 
-// Linting broken in this file cause of `extends: ...`
-/* 
-  eslint-disable @typescript-eslint/no-unsafe-argument, 
-  @typescript-eslint/restrict-template-expressions,
-  @typescript-eslint/no-unsafe-return
-*/
-export default defineComponent({
+export default {
   name: 'UnpaidInvoices',
   components: {
     PeriodSelector,
     SectionHeader,
+    Button,
     MouseFollower,
   },
-  extends: BaseDashboardChart,
-  props: {
-    schemaName: { type: String as PropType<string>, required: true },
+  data: () => ({
+    idx: -1,
+    colors: [uicolors.blue['500'], uicolors.pink['500']],
+    invoices: [
+      {
+        title: t`Sales Invoices`,
+        schemaName: ModelNameEnum.SalesInvoice,
+        total: 0,
+        unpaid: 0,
+        hasData: false,
+        paid: 0,
+        count: 0,
+        unpaidCount: 0,
+        paidCount: 0,
+        color: 'blue',
+        periodKey: 'salesInvoicePeriod',
+        barWidth: 40,
+      },
+      {
+        title: t`Purchase Invoices`,
+        schemaName: ModelNameEnum.PurchaseInvoice,
+        total: 0,
+        unpaid: 0,
+        hasData: false,
+        paid: 0,
+        count: 0,
+        unpaidCount: 0,
+        paidCount: 0,
+        color: 'pink',
+        periodKey: 'purchaseInvoicePeriod',
+        barWidth: 60,
+      },
+    ],
+    salesInvoicePeriod: 'This Year',
+    purchaseInvoicePeriod: 'This Year',
+  }),
+  watch: {
+    salesInvoicePeriod: 'calculateInvoiceTotals',
+    purchaseInvoicePeriod: 'calculateInvoiceTotals',
   },
-  data() {
-    return {
-      show: false,
-      total: 0,
-      unpaid: 0,
-      hasData: false,
-      paid: 0,
-      count: 0,
-      unpaidCount: 0,
-      paidCount: 0,
-      barWidth: 40,
-      period: 'This Year',
-    } as {
-      show: boolean;
-      period: PeriodKey;
-      total: number;
-      unpaid: number;
-      hasData: boolean;
-      paid: number;
-      count: number;
-      unpaidCount: number;
-      paidCount: number;
-      barWidth: number;
-    };
-  },
-  computed: {
-    title(): string {
-      return fyo.schemaMap[this.schemaName]?.label ?? '';
-    },
-    color(): 'blue' | 'pink' {
-      if (this.schemaName === ModelNameEnum.SalesInvoice) {
-        return 'blue';
-      }
-
-      return 'pink';
-    },
-    colors(): string {
-      return uicolors[this.color]['500'];
-    },
-    paidColor(): string {
-      if (!this.hasData) {
-        return 'bg-gray-400';
-      }
-
-      return `bg-${this.color}-500`;
-    },
-    unpaidColor(): string {
-      if (!this.hasData) {
-        return 'bg-gray-200';
-      }
-
-      return `bg-${this.color}-200`;
-    },
-  },
-  async activated() {
-    await this.setData();
+  activated() {
+    this.calculateInvoiceTotals();
   },
   methods: {
-    async routeToInvoices(type: 'paid' | 'unpaid') {
-      if (type === 'paid' && !this.paidCount) {
-        return;
-      }
+    async calculateInvoiceTotals() {
+      for (const invoice of this.invoices) {
+        const { fromDate, toDate } = await getDatesAndPeriodList(
+          this.$data[invoice.periodKey]
+        );
 
-      if (type === 'unpaid' && !this.unpaidCount) {
-        return;
-      }
+        const { total, outstanding } = await fyo.db.getTotalOutstanding(
+          invoice.schemaName,
+          fromDate.toISO(),
+          toDate.toISO()
+        );
 
-      const zero = this.fyo.pesa(0).store;
-      const filters = { outstandingAmount: ['=', zero] };
-      const schemaLabel = fyo.schemaMap[this.schemaName]?.label ?? '';
-      let label = t`Paid ${schemaLabel}`;
-      if (type === 'unpaid') {
-        filters.outstandingAmount[0] = '!=';
-        label = t`Unpaid ${schemaLabel}`;
-      }
+        const { countTotal, countOutstanding } = await this.getCounts(
+          invoice.schemaName,
+          fromDate,
+          toDate
+        );
 
-      const path = `/list/${this.schemaName}/${label}`;
-      const query = { filters: JSON.stringify(filters) };
-      await routeTo({ path, query });
+        invoice.total = total ?? 0;
+        invoice.unpaid = outstanding ?? 0;
+        invoice.paid = total - outstanding;
+        invoice.hasData = countTotal > 0;
+        invoice.count = countTotal;
+        invoice.paidCount = countTotal - countOutstanding;
+        invoice.unpaidCount = countOutstanding;
+        invoice.barWidth = (invoice.paid / (invoice.total || 1)) * 100;
+      }
     },
-    async setData() {
-      const { fromDate, toDate } = getDatesAndPeriodList(this.period);
-
-      const { total, outstanding } = await fyo.db.getTotalOutstanding(
-        this.schemaName,
-        fromDate.toISO(),
-        toDate.toISO()
-      );
-
-      const { countTotal, countOutstanding } = await this.getCounts(
-        this.schemaName,
-        fromDate,
-        toDate
-      );
-
-      this.total = total ?? 0;
-      this.unpaid = outstanding ?? 0;
-      this.paid = total - outstanding;
-      this.hasData = countTotal > 0;
-      this.count = countTotal;
-      this.paidCount = countTotal - countOutstanding;
-      this.unpaidCount = countOutstanding;
-      this.barWidth = (this.paid / (this.total || 1)) * 100;
-    },
-    async newInvoice() {
-      const doc = fyo.doc.getNewDoc(this.schemaName);
-      await routeTo(`/edit/${this.schemaName}/${doc.name!}`);
+    async newInvoice(invoice) {
+      let doc = await fyo.doc.getNewDoc(invoice.schemaName);
+      routeTo(`/edit/${invoice.schemaName}/${doc.name}`);
     },
 
-    async getCounts(schemaName: string, fromDate: DateTime, toDate: DateTime) {
+    async getCounts(schemaName, fromDate, toDate) {
       const outstandingAmounts = await fyo.db.getAllRaw(schemaName, {
         fields: ['outstandingAmount'],
         filters: {
@@ -231,7 +213,7 @@ export default defineComponent({
       });
 
       const isOutstanding = outstandingAmounts.map((o) =>
-        safeParseFloat(o.outstandingAmount)
+        parseFloat(o.outstandingAmount)
       );
 
       return {
@@ -240,5 +222,5 @@ export default defineComponent({
       };
     },
   },
-});
+};
 </script>

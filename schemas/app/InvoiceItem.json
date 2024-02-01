@@ -18,44 +18,6 @@
       "fieldtype": "Text"
     },
     {
-      "fieldname": "rate",
-      "label": "Rate",
-      "fieldtype": "Currency",
-      "required": true
-    },
-    {
-      "fieldname": "transferUnit",
-      "label": "Transfer Unit",
-      "fieldtype": "Link",
-      "target": "UOM",
-      "default": "Unit",
-      "placeholder": "Unit"
-    },
-    {
-      "fieldname": "transferQuantity",
-      "label": "Qty. in Transfer Unit",
-      "fieldtype": "Float",
-      "default": 1,
-      "required": true
-    },
-    {
-      "fieldname": "unit",
-      "label": "Stock Unit",
-      "fieldtype": "Link",
-      "target": "UOM",
-      "default": "Unit",
-      "placeholder": "Unit",
-      "readOnly": true
-    },
-    {
-      "fieldname": "batch",
-      "label": "Batch",
-      "fieldtype": "Link",
-      "create": true,
-      "target": "Batch",
-      "placeholder": "Batch"
-    },
-    {
       "fieldname": "quantity",
       "label": "Quantity",
       "fieldtype": "Float",
@@ -63,11 +25,10 @@
       "default": 1
     },
     {
-      "fieldname": "unitConversionFactor",
-      "label": "Conversion Factor",
-      "fieldtype": "Float",
-      "required": true,
-      "default": 1
+      "fieldname": "rate",
+      "label": "Rate",
+      "fieldtype": "Currency",
+      "required": true
     },
     {
       "fieldname": "account",
@@ -126,12 +87,6 @@
       "label": "HSN/SAC",
       "fieldtype": "Int",
       "placeholder": "HSN/SAC Code"
-    },
-    {
-      "fieldname": "stockNotTransferred",
-      "label": "Stock Not Transferred",
-      "fieldtype": "Float",
-      "readOnly": true
     }
   ],
   "tableFields": ["item", "tax", "quantity", "rate", "amount"],
@@ -142,15 +97,8 @@
     "description",
     "hsnCode",
     "tax",
-    "rate",
-
-    "transferQuantity",
-    "transferUnit",
-    "batch",
     "quantity",
-    "unit",
-    "unitConversionFactor",
-
+    "rate",
     "amount",
     "setItemDiscountAmount",
     "itemDiscountAmount",

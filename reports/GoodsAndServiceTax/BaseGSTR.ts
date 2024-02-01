@@ -17,9 +17,9 @@ export abstract class BaseGSTR extends Report {
   toDate?: string;
   fromDate?: string;
   transferType?: TransferType;
-  usePagination = true;
+  usePagination: boolean = true;
   gstrRows?: GSTRRow[];
-  loading = false;
+  loading: boolean = false;
 
   abstract gstrType: GSTRType;
 
@@ -111,7 +111,7 @@ export abstract class BaseGSTR extends Report {
       return (row) => row.rate === 0; // this takes care of both nil rated, exempted goods
     }
 
-    return () => true;
+    return (_) => true;
   }
 
   async getEntries() {
@@ -133,7 +133,7 @@ export abstract class BaseGSTR extends Report {
     const entries = await this.getEntries();
     const gstrRows: GSTRRow[] = [];
     for (const entry of entries) {
-      const gstrRow = await this.getGstrRow(entry.name);
+      const gstrRow = await this.getGstrRow(entry.name as string);
       gstrRows.push(gstrRow);
     }
     return gstrRows;
@@ -149,7 +149,7 @@ export abstract class BaseGSTR extends Report {
       'gstin'
     )) as string | null;
 
-    const party = (await this.fyo.doc.getDoc('Party', entry.party)) as Party;
+    const party = (await this.fyo.doc.getDoc('Party', entry.party!)) as Party;
 
     let place = '';
     if (party.address) {
@@ -216,7 +216,7 @@ export abstract class BaseGSTR extends Report {
     }
   }
 
-  setDefaultFilters() {
+  async setDefaultFilters() {
     if (!this.toDate) {
       this.toDate = DateTime.local().toISODate();
     }

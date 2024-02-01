@@ -1,18 +1,13 @@
 import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
-import {
-  EmptyMessageMap,
-  FormulaMap,
-  ListViewSettings,
-  ListsMap,
-} from 'fyo/model/types';
+import { EmptyMessageMap, FormulaMap, ListsMap } from 'fyo/model/types';
 import { codeStateMap } from 'regional/in';
 import { getCountryInfo } from 'utils/misc';
 
 export class Address extends Doc {
   formulas: FormulaMap = {
     addressDisplay: {
-      formula: () => {
+      formula: async () => {
         return [
           this.addressLine1,
           this.addressLine2,
@@ -59,10 +54,4 @@ export class Address extends Doc {
       return t`Enter Country to load States`;
     },
   };
-
-  static override getListViewSettings(): ListViewSettings {
-    return {
-      columns: ['name', 'addressLine1', 'city', 'state', 'country'],
-    };
-  }
 }

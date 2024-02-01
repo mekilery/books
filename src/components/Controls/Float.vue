@@ -1,20 +1,19 @@
-<script lang="ts">
-import { safeParseFloat } from 'utils/index';
-import { defineComponent } from 'vue';
+<script>
 import Int from './Int.vue';
 
-export default defineComponent({
+export default {
   name: 'Float',
   extends: Int,
   computed: {
     inputType() {
       return 'number';
-    },
+    }
   },
   methods: {
-    parse(value: unknown): number {
-      return safeParseFloat(value);
+    parse(value) {
+      const parsedValue = parseFloat(value);
+      return isNaN(parsedValue) ? 0 : parsedValue;
     },
   },
-});
+};
 </script>

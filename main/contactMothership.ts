@@ -4,7 +4,6 @@ import fetch from 'node-fetch';
 import path from 'path';
 import { Creds } from 'utils/types';
 import { rendererLog } from './helpers';
-import type { Main } from 'main';
 
 export function getUrlAndTokenString(): Creds {
   const inProduction = app.isPackaged;
@@ -14,11 +13,10 @@ export function getUrlAndTokenString(): Creds {
     '../creds/log_creds.txt'
   );
   if (!fs.existsSync(errLogCredsPath)) {
-    errLogCredsPath = path.join(__dirname, '..', '..', 'log_creds.txt');
+    errLogCredsPath = path.join(__dirname, '../log_creds.txt');
   }
 
   if (!fs.existsSync(errLogCredsPath)) {
-    // eslint-disable-next-line no-console
     !inProduction && console.log(`${errLogCredsPath} doesn't exist, can't log`);
     return empty;
   }
@@ -31,9 +29,7 @@ export function getUrlAndTokenString(): Creds {
       .filter((f) => f.length);
   } catch (err) {
     if (!inProduction) {
-      // eslint-disable-next-line no-console
       console.log(`logging error using creds at: ${errLogCredsPath} failed`);
-      // eslint-disable-next-line no-console
       console.log(err);
     }
     return empty;
@@ -46,7 +42,7 @@ export function getUrlAndTokenString(): Creds {
   };
 }
 
-export async function sendError(body: string, main: Main) {
+export async function sendError(body: string) {
   const { errorLogUrl, tokenString } = getUrlAndTokenString();
   const headers = {
     Authorization: tokenString,
@@ -55,6 +51,6 @@ export async function sendError(body: string, main: Main) {
   };
 
   await fetch(errorLogUrl, { method: 'POST', headers, body }).catch((err) => {
-    rendererLog(main, err);
+    rendererLog(err);
   });
 }

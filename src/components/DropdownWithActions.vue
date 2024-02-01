@@ -2,11 +2,11 @@
   <Dropdown
     v-if="actions && actions.length"
     class="text-xs"
-    :items="items"
+    :items="actions"
     :doc="doc"
     right
   >
-    <template #default="{ toggleDropdown }">
+    <template v-slot="{ toggleDropdown }">
       <Button :type="type" :icon="icon" @click="toggleDropdown()">
         <slot>
           <feather-icon name="more-horizontal" class="w-4 h-4" />
@@ -16,49 +16,23 @@
   </Dropdown>
 </template>
 
-<script lang="ts">
-import { Doc } from 'fyo/model/doc';
-import { Action } from 'fyo/model/types';
-import Button from 'src/components/Button.vue';
-import Dropdown from 'src/components/Dropdown.vue';
-import { DropdownItem } from 'src/utils/types';
-import { defineComponent, PropType } from 'vue';
+<script>
+import Button from 'src/components/Button';
+import Dropdown from 'src/components/Dropdown';
 
-export default defineComponent({
+export default {
   name: 'DropdownWithActions',
+  props: {
+    actions: { default: [] },
+    type: { type: String, default: 'secondary' },
+    icon: { type: Boolean, default: true },
+  },
+  inject: {
+    doc: { default: null },
+  },
   components: {
     Dropdown,
     Button,
   },
-  inject: {
-    injectedDoc: {
-      from: 'doc',
-      default: undefined,
-    },
-  },
-  props: {
-    actions: { type: Array as PropType<Action[]>, default: () => [] },
-    type: { type: String, default: 'secondary' },
-    icon: { type: Boolean, default: true },
-  },
-  computed: {
-    doc() {
-      // @ts-ignore
-      const doc = this.injectedDoc;
-      if (doc instanceof Doc) {
-        return doc;
-      }
-
-      return undefined;
-    },
-    items(): DropdownItem[] {
-      return this.actions.map(({ label, group, component, action }) => ({
-        label,
-        group,
-        action,
-        component,
-      }));
-    },
-  },
-});
+};
 </script>

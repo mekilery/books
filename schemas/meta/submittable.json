@@ -6,16 +6,14 @@
       "label": "Submitted",
       "fieldtype": "Check",
       "required": true,
-      "meta": true,
-      "section": "System"
+      "meta": true
     },
     {
       "fieldname": "cancelled",
       "label": "Cancelled",
       "fieldtype": "Check",
       "required": true,
-      "meta": true,
-      "section": "System"
+      "meta": true
     }
   ]
 }

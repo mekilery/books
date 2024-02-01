@@ -1,97 +1,82 @@
 <template>
-  <div :title="df.label">
-    <div v-if="showLabel" :class="labelClasses">
+  <div>
+    <div :class="labelClasses" v-if="showLabel">
       {{ df.label }}
     </div>
     <div :class="showMandatory ? 'show-mandatory' : ''">
       <input
-        ref="input"
         spellcheck="false"
+        ref="input"
         class="bg-transparent"
         :class="[inputClasses, containerClasses]"
         :type="inputType"
         :value="value"
         :placeholder="inputPlaceholder"
         :readonly="isReadOnly"
-        :step="step"
-        :max="isNumeric(df) ? df.maxvalue : undefined"
-        :min="isNumeric(df) ? df.minvalue : undefined"
-        :style="containerStyles"
-        :tabindex="isReadOnly ? '-1' : '0'"
-        @blur="onBlur"
+        :max="df.maxvalue"
+        :min="df.minvalue"
+        @blur="(e) => !isReadOnly && triggerChange(e.target.value)"
         @focus="(e) => !isReadOnly && $emit('focus', e)"
         @input="(e) => !isReadOnly && $emit('input', e)"
       />
     </div>
   </div>
 </template>
-<script lang="ts">
-import { Doc } from 'fyo/model/doc';
-import { Field } from 'schemas/types';
+
+<script>
 import { isNumeric } from 'src/utils';
 import { evaluateReadOnly, evaluateRequired } from 'src/utils/doc';
 import { getIsNullOrUndef } from 'utils/index';
-import { defineComponent, PropType } from 'vue';
 
-export default defineComponent({
+export default {
   name: 'Base',
-  inject: {
-    injectedDoc: {
-      from: 'doc',
-      default: undefined,
-    },
-  },
   props: {
-    df: { type: Object as PropType<Field>, required: true },
-    step: { type: Number, default: 1 },
+    df: Object,
     value: [String, Number, Boolean, Object],
-    inputClass: [String, Array] as PropType<string | string[]>,
+    inputClass: [Function, String, Object],
     border: { type: Boolean, default: false },
-    size: { type: String, default: 'large' },
     placeholder: String,
-    showLabel: { type: Boolean, default: false },
-    containerStyles: { type: Object, default: () => ({}) },
-    textRight: {
-      type: [null, Boolean] as PropType<boolean | null>,
-      default: null,
-    },
-    readOnly: {
-      type: [null, Boolean] as PropType<boolean | null>,
-      default: null,
-    },
-    required: {
-      type: [null, Boolean] as PropType<boolean | null>,
-      default: null,
-    },
+    size: String,
+    showLabel: Boolean,
+    autofocus: Boolean,
+    textRight: { type: [null, Boolean], default: null },
+    readOnly: { type: [null, Boolean], default: null },
+    required: { type: [null, Boolean], default: null },
   },
   emits: ['focus', 'input', 'change'],
-  computed: {
-    doc(): Doc | undefined {
-      // @ts-ignore
-      const doc = this.injectedDoc;
-
-      if (doc instanceof Doc) {
-        return doc;
-      }
-
-      return undefined;
+  inject: {
+    schemaName: {
+      default: null,
     },
-    inputType(): string {
+    name: {
+      default: null,
+    },
+    doc: {
+      default: null,
+    },
+  },
+  mounted() {
+    if (this.autofocus) {
+      this.focus();
+    }
+  },
+  computed: {
+    inputType() {
       return 'text';
     },
-    labelClasses(): string {
+    labelClasses() {
       return 'text-gray-600 text-sm mb-1';
     },
-    inputClasses(): string[] {
+    inputClasses() {
       /**
        * These classes will be used by components that extend Base
        */
 
-      const classes: string[] = [];
+      const classes = [];
 
-      classes.push(...this.baseInputClasses);
+      classes.push(this.baseInputClasses);
       if (this.textRight ?? isNumeric(this.df)) {
-        classes.push('text-end');
+        classes.push('text-right');
       }
 
       classes.push(this.sizeClasses);
@@ -99,7 +84,7 @@ export default defineComponent({
 
       return this.getInputClassesFromProp(classes).filter(Boolean);
     },
-    baseInputClasses(): string[] {
+    baseInputClasses() {
       return [
         'text-base',
         'focus:outline-none',
@@ -107,60 +92,54 @@ export default defineComponent({
         'placeholder-gray-500',
       ];
     },
-    sizeClasses(): string {
+    sizeClasses() {
       if (this.size === 'small') {
         return 'px-2 py-1';
       }
       return 'px-3 py-2';
     },
-    inputReadOnlyClasses(): string {
+    inputReadOnlyClasses() {
       if (this.isReadOnly) {
         return 'text-gray-800 cursor-default';
       }
 
       return 'text-gray-900';
     },
-    containerClasses(): string[] {
+    containerClasses() {
       /**
        * Used to accomodate extending compoents where the input is contained in
        * a div eg AutoComplete
        */
-      const classes: string[] = [];
-      classes.push(...this.baseContainerClasses);
+      const classes = [];
+      classes.push(this.baseContainerClasses);
       classes.push(this.containerReadOnlyClasses);
       classes.push(this.borderClasses);
       return classes.filter(Boolean);
     },
-    baseContainerClasses(): string[] {
+    baseContainerClasses() {
       return ['rounded'];
     },
-    containerReadOnlyClasses(): string {
+    containerReadOnlyClasses() {
       if (!this.isReadOnly) {
         return 'focus-within:bg-gray-100';
       }
 
       return '';
     },
-    borderClasses(): string {
-      if (!this.border) {
-        return '';
+    borderClasses() {
+      if (this.border) {
+        return 'bg-gray-50 border border-gray-200';
       }
 
-      const border = 'border border-gray-200';
-      let background = 'bg-gray-25';
-      if (this.isReadOnly) {
-        background = 'bg-gray-50';
-      }
-
-      return border + ' ' + background;
+      return '';
     },
-    inputPlaceholder(): string {
+    inputPlaceholder() {
       return this.placeholder || this.df.placeholder || this.df.label;
     },
-    showMandatory(): boolean {
+    showMandatory() {
       return this.isEmpty && this.isRequired;
     },
-    isEmpty(): boolean {
+    isEmpty() {
       if (Array.isArray(this.value) && !this.value.length) {
         return true;
       }
@@ -175,14 +154,14 @@ export default defineComponent({
 
       return false;
     },
-    isReadOnly(): boolean {
+    isReadOnly() {
       if (typeof this.readOnly === 'boolean') {
         return this.readOnly;
       }
 
       return evaluateReadOnly(this.df, this.doc);
     },
-    isRequired(): boolean {
+    isRequired() {
       if (typeof this.required === 'boolean') {
         return this.required;
       }
@@ -191,40 +170,25 @@ export default defineComponent({
     },
   },
   methods: {
-    onBlur(e: FocusEvent) {
-      const target = e.target;
-      if (!(target instanceof HTMLInputElement)) {
-        return;
-      }
-
-      if (this.isReadOnly) {
-        return;
-      }
-
-      this.triggerChange(target.value);
-    },
-    getInputClassesFromProp(classes: string[]) {
+    getInputClassesFromProp(classes) {
       if (!this.inputClass) {
         return classes;
       }
 
-      let inputClass = this.inputClass;
-      if (typeof inputClass === 'string') {
-        inputClass = [inputClass];
+      if (typeof this.inputClass === 'function') {
+        classes = this.inputClass(classes);
+      } else {
+        classes.push(this.inputClass);
       }
 
-      inputClass = inputClass.filter((i) => typeof i === 'string');
-
-      return [classes, inputClass].flat();
+      return classes;
     },
-    focus(): void {
-      const el = this.$refs.input;
-
-      if (el instanceof HTMLInputElement) {
-        el.focus();
+    focus() {
+      if (this.$refs.input && this.$refs.input.focus) {
+        this.$refs.input.focus();
       }
     },
-    triggerChange(value: unknown): void {
+    triggerChange(value) {
       value = this.parse(value);
 
       if (value === '') {
@@ -233,10 +197,10 @@ export default defineComponent({
 
       this.$emit('change', value);
     },
-    parse(value: unknown): unknown {
+    parse(value) {
       return value;
     },
     isNumeric,
   },
-});
+};
 </script>

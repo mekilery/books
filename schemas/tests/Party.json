@@ -72,7 +72,9 @@
       "fieldname": "address",
       "label": "Address",
       "fieldtype": "Link",
-      "target": "Address"
+      "target": "Address",
+      "placeholder": "Click to create",
+      "inline": true
     }
   ],
   "quickEditFields": [

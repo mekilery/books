@@ -1,14 +1,6 @@
-import {
-  MessageBoxOptions,
-  OpenDialogOptions,
-  SaveDialogOptions,
-  app,
-  dialog,
-  ipcMain,
-} from 'electron';
+import { app, dialog, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { constants } from 'fs';
-import fs from 'fs-extra';
+import fs from 'fs/promises';
 import path from 'path';
 import { SelectFileOptions, SelectFileReturn } from 'utils/types';
 import databaseManager from '../backend/database/manager';
@@ -18,7 +10,6 @@ import { DatabaseMethod } from '../utils/db/types';
 import { IPC_ACTIONS } from '../utils/messages';
 import { getUrlAndTokenString, sendError } from './contactMothership';
 import { getLanguageMap } from './getLanguageMap';
-import { getTemplates } from './getPrintTemplates';
 import {
   getConfigFilesWithModified,
   getErrorHandledReponse,
@@ -28,92 +19,39 @@ import {
 import { saveHtmlAsPdf } from './saveHtmlAsPdf';
 
 export default function registerIpcMainActionListeners(main: Main) {
-  ipcMain.handle(IPC_ACTIONS.CHECK_DB_ACCESS, async (_, filePath: string) => {
-    try {
-      await fs.access(filePath, constants.W_OK | constants.R_OK);
-    } catch (err) {
-      return false;
+  ipcMain.handle(IPC_ACTIONS.GET_OPEN_FILEPATH, async (event, options) => {
+    return await dialog.showOpenDialog(main.mainWindow!, options);
+  });
+
+  ipcMain.handle(IPC_ACTIONS.GET_SAVE_FILEPATH, async (event, options) => {
+    return await dialog.showSaveDialog(main.mainWindow!, options);
+  });
+
+  ipcMain.handle(IPC_ACTIONS.GET_DIALOG_RESPONSE, async (event, options) => {
+    if (main.isDevelopment || main.isLinux) {
+      Object.assign(options, { icon: main.icon });
     }
 
-    return true;
+    return await dialog.showMessageBox(main.mainWindow!, options);
+  });
+
+  ipcMain.handle(IPC_ACTIONS.SHOW_ERROR, async (event, { title, content }) => {
+    return await dialog.showErrorBox(title, content);
   });
 
   ipcMain.handle(
-    IPC_ACTIONS.GET_DB_DEFAULT_PATH,
-    async (_, companyName: string) => {
-      let root: string;
-      try {
-        root = app.getPath('documents');
-      } catch {
-        root = app.getPath('userData');
-      }
-
-      if (main.isDevelopment) {
-        root = 'dbs';
-      }
-
-      const dbsPath = path.join(root, 'Frappe Books');
-      const backupPath = path.join(dbsPath, 'backups');
-      await fs.ensureDir(backupPath);
-
-      return path.join(dbsPath, `${companyName}.books.db`);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_ACTIONS.GET_OPEN_FILEPATH,
-    async (_, options: OpenDialogOptions) => {
-      return await dialog.showOpenDialog(main.mainWindow!, options);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_ACTIONS.GET_SAVE_FILEPATH,
-    async (_, options: SaveDialogOptions) => {
-      return await dialog.showSaveDialog(main.mainWindow!, options);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_ACTIONS.GET_DIALOG_RESPONSE,
-    async (_, options: MessageBoxOptions) => {
-      if (main.isDevelopment || main.isLinux) {
-        Object.assign(options, { icon: main.icon });
-      }
-
-      return await dialog.showMessageBox(main.mainWindow!, options);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_ACTIONS.SHOW_ERROR,
-    (_, { title, content }: { title: string; content: string }) => {
-      return dialog.showErrorBox(title, content);
-    }
-  );
-
-  ipcMain.handle(
     IPC_ACTIONS.SAVE_HTML_AS_PDF,
-    async (
-      _,
-      html: string,
-      savePath: string,
-      width: number,
-      height: number
-    ) => {
-      return await saveHtmlAsPdf(html, savePath, app, width, height);
+    async (event, html, savePath) => {
+      return await saveHtmlAsPdf(html, savePath, app);
     }
   );
 
-  ipcMain.handle(
-    IPC_ACTIONS.SAVE_DATA,
-    async (_, data: string, savePath: string) => {
-      return await fs.writeFile(savePath, data, { encoding: 'utf-8' });
-    }
-  );
+  ipcMain.handle(IPC_ACTIONS.SAVE_DATA, async (event, data, savePath) => {
+    return await fs.writeFile(savePath, data, { encoding: 'utf-8' });
+  });
 
-  ipcMain.handle(IPC_ACTIONS.SEND_ERROR, async (_, bodyJson: string) => {
-    await sendError(bodyJson, main);
+  ipcMain.handle(IPC_ACTIONS.SEND_ERROR, (event, bodyJson) => {
+    sendError(bodyJson);
   });
 
   ipcMain.handle(IPC_ACTIONS.CHECK_FOR_UPDATES, async () => {
@@ -133,7 +71,7 @@ export default function registerIpcMainActionListeners(main: Main) {
     main.checkedForUpdate = true;
   });
 
-  ipcMain.handle(IPC_ACTIONS.GET_LANGUAGE_MAP, async (_, code: string) => {
+  ipcMain.handle(IPC_ACTIONS.GET_LANGUAGE_MAP, async (event, code) => {
     const obj = { languageMap: {}, success: true, message: '' };
     try {
       obj.languageMap = await getLanguageMap(code);
@@ -178,35 +116,25 @@ export default function registerIpcMainActionListeners(main: Main) {
     }
   );
 
-  ipcMain.handle(IPC_ACTIONS.GET_CREDS, () => {
-    return getUrlAndTokenString();
+  ipcMain.handle(IPC_ACTIONS.GET_CREDS, async (event) => {
+    return await getUrlAndTokenString();
   });
 
-  ipcMain.handle(IPC_ACTIONS.DELETE_FILE, async (_, filePath: string) => {
+  ipcMain.handle(IPC_ACTIONS.DELETE_FILE, async (_, filePath) => {
     return getErrorHandledReponse(async () => await fs.unlink(filePath));
   });
 
-  ipcMain.handle(IPC_ACTIONS.GET_DB_LIST, async () => {
+  ipcMain.handle(IPC_ACTIONS.GET_DB_LIST, async (_) => {
     const files = await setAndGetCleanedConfigFiles();
     return await getConfigFilesWithModified(files);
   });
 
-  ipcMain.handle(IPC_ACTIONS.GET_ENV, async () => {
-    let version = app.getVersion();
-    if (main.isDevelopment) {
-      const packageJson = await fs.readFile('package.json', 'utf-8');
-      version = (JSON.parse(packageJson) as { version: string }).version;
-    }
-
+  ipcMain.handle(IPC_ACTIONS.GET_ENV, async (_) => {
     return {
       isDevelopment: main.isDevelopment,
       platform: process.platform,
-      version,
+      version: app.getVersion(),
     };
-  });
-
-  ipcMain.handle(IPC_ACTIONS.GET_TEMPLATES, async () => {
-    return getTemplates();
   });
 
   /**
@@ -216,7 +144,7 @@ export default function registerIpcMainActionListeners(main: Main) {
   ipcMain.handle(
     IPC_ACTIONS.DB_CREATE,
     async (_, dbPath: string, countryCode: string) => {
-      return await getErrorHandledReponse(async () => {
+      return await getErrorHandledReponse(async function dbFunc() {
         return await databaseManager.createNewDatabase(dbPath, countryCode);
       });
     }
@@ -225,7 +153,7 @@ export default function registerIpcMainActionListeners(main: Main) {
   ipcMain.handle(
     IPC_ACTIONS.DB_CONNECT,
     async (_, dbPath: string, countryCode?: string) => {
-      return await getErrorHandledReponse(async () => {
+      return await getErrorHandledReponse(async function dbFunc() {
         return await databaseManager.connectToDatabase(dbPath, countryCode);
       });
     }
@@ -234,7 +162,7 @@ export default function registerIpcMainActionListeners(main: Main) {
   ipcMain.handle(
     IPC_ACTIONS.DB_CALL,
     async (_, method: DatabaseMethod, ...args: unknown[]) => {
-      return await getErrorHandledReponse(async () => {
+      return await getErrorHandledReponse(async function dbFunc() {
         return await databaseManager.call(method, ...args);
       });
     }
@@ -243,15 +171,15 @@ export default function registerIpcMainActionListeners(main: Main) {
   ipcMain.handle(
     IPC_ACTIONS.DB_BESPOKE,
     async (_, method: string, ...args: unknown[]) => {
-      return await getErrorHandledReponse(async () => {
+      return await getErrorHandledReponse(async function dbFunc() {
         return await databaseManager.callBespoke(method, ...args);
       });
     }
   );
 
-  ipcMain.handle(IPC_ACTIONS.DB_SCHEMA, async () => {
-    return await getErrorHandledReponse(() => {
-      return databaseManager.getSchemaMap();
+  ipcMain.handle(IPC_ACTIONS.DB_SCHEMA, async (_) => {
+    return await getErrorHandledReponse(async function dbFunc() {
+      return await databaseManager.getSchemaMap();
     });
   });
 }

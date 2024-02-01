@@ -1,30 +1,28 @@
+import { ipcRenderer } from 'electron';
 import { DEFAULT_LANGUAGE } from 'fyo/utils/consts';
 import { setLanguageMapOnTranslationString } from 'fyo/utils/translation';
 import { fyo } from 'src/initFyo';
-import { systemLanguageRef } from './refs';
+import { IPC_ACTIONS, IPC_MESSAGES } from 'utils/messages';
+import { showToast } from './ui';
 
 // Language: Language Code in books/translations
 export const languageCodeMap: Record<string, string> = {
-  Arabic: 'ar',
-  Catalan: 'ca-ES',
-  Danish: 'da',
-  Dutch: 'nl',
   English: 'en',
   French: 'fr',
   German: 'de',
-  Gujarati: 'gu',
-  Korean: 'ko',
-  Nepali: 'np',
   Portuguese: 'pt',
-  'Simplified Chinese': 'zh-CN',
+  Arabic: 'ar',
+  Catalan: 'ca-ES',
   Spanish: 'es',
-  Swedish: 'sv',
+  Dutch: 'nl',
+  Gujarati: 'gu',
   Turkish: 'tr',
+  Korean: 'ko',
 };
 
 export async function setLanguageMap(
   initLanguage?: string,
-  dontReload = false
+  dontReload: boolean = false
 ) {
   const oldLanguage = fyo.config.get('language') as string;
   initLanguage ??= oldLanguage;
@@ -42,11 +40,10 @@ export async function setLanguageMap(
 
   if (success && !usingDefault) {
     fyo.config.set('language', language);
-    systemLanguageRef.value = language;
   }
 
   if (!dontReload && success && initLanguage !== oldLanguage) {
-    ipc.reloadWindow();
+    await ipcRenderer.send(IPC_MESSAGES.RELOAD_MAIN_WINDOW);
   }
   return success;
 }
@@ -64,14 +61,16 @@ function getLanguageCode(initLanguage: string, oldLanguage: string) {
 }
 
 async function fetchAndSetLanguageMap(code: string) {
-  const { success, message, languageMap } = await ipc.getLanguageMap(code);
+  const { success, message, languageMap } = await ipcRenderer.invoke(
+    IPC_ACTIONS.GET_LANGUAGE_MAP,
+    code
+  );
 
   if (!success) {
-    const { showToast } = await import('src/utils/interactive');
     showToast({ type: 'error', message });
   } else {
     setLanguageMapOnTranslationString(languageMap);
-    await fyo.db.translateSchemaMap(languageMap);
+    fyo.db.translateSchemaMap(languageMap);
   }
 
   return success;

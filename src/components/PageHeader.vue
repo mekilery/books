@@ -6,99 +6,34 @@
       platform !== 'Windows' ? 'window-drag' : '',
     ]"
   >
-    <Transition name="spacer">
-      <div
-        v-if="!showSidebar && platform === 'Mac' && languageDirection !== 'rtl'"
-        class="h-full"
-        :class="spacerClass"
-      />
-    </Transition>
-
-    <div
-      class="flex items-center window-no-drag gap-4 me-auto"
-      :class="platform === 'Mac' && languageDirection === 'rtl' ? 'me-18' : ''"
-    >
-      <!-- Nav Group -->
-      <PageHeaderNavGroup />
-      <h1
-        v-if="title"
-        class="text-xl font-semibold select-none whitespace-nowrap"
-      >
-        {{ title }}
-      </h1>
-
-      <!-- Left Slot -->
-      <div class="flex items-stretch window-no-drag gap-4">
-        <slot name="left" />
-      </div>
-    </div>
-
-    <!-- Right (regular) Slot -->
-    <div
-      class="flex items-stretch window-no-drag gap-2 ms-auto"
-      :class="platform === 'Mac' && languageDirection === 'rtl' ? 'me-18' : ''"
-    >
+    <h1 class="text-xl font-semibold select-none" v-if="title">
+      {{ title }}
+    </h1>
+    <div class="flex items-stretch window-no-drag gap-2 ml-auto">
       <slot />
+      <div class="border-r" v-if="showBorder" />
+      <BackLink v-if="backLink" class="window-no-drag" />
+      <SearchBar v-if="!hideSearch" />
     </div>
   </div>
 </template>
-<script lang="ts">
-import { languageDirectionKey } from 'src/utils/injectionKeys';
-import { showSidebar } from 'src/utils/refs';
-import { defineComponent, inject, Transition } from 'vue';
-import PageHeaderNavGroup from './PageHeaderNavGroup.vue';
+<script>
+import BackLink from './BackLink.vue';
+import SearchBar from './SearchBar.vue';
 
-export default defineComponent({
-  components: { Transition, PageHeaderNavGroup },
+export default {
   props: {
     title: { type: String, default: '' },
+    backLink: { type: Boolean, default: true },
+    hideSearch: { type: Boolean, default: false },
     border: { type: Boolean, default: true },
     searchborder: { type: Boolean, default: true },
   },
-  setup() {
-    return { showSidebar, languageDirection: inject(languageDirectionKey) };
-  },
+  components: { SearchBar, BackLink },
   computed: {
     showBorder() {
       return !!this.$slots.default && this.searchborder;
     },
-    spacerClass() {
-      if (this.showSidebar) {
-        return '';
-      }
-
-      if (this.border) {
-        return 'w-tl me-4 border-e';
-      }
-
-      return 'w-tl me-4';
-    },
   },
-});
+};
 </script>
-<style scoped>
-.w-tl {
-  width: var(--w-trafficlights);
-}
-
-.spacer-enter-from,
-.spacer-leave-to {
-  opacity: 0;
-  width: 0px;
-  margin-right: 0px;
-  border-right-width: 0px;
-}
-
-.spacer-enter-to,
-.spacer-leave-from {
-  opacity: 1;
-  width: var(--w-trafficlights);
-  margin-right: 1rem;
-  border-right-width: 1px;
-}
-
-.spacer-enter-active,
-.spacer-leave-active {
-  transition: all 150ms ease-out;
-}
-</style>

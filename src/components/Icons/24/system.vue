@@ -7,9 +7,9 @@
   </svg>
 </template>
 <script>
-import Base from '../base.vue';
+import Base from '../base';
 export default {
   name: 'IconSystem',
-  extends: Base,
+  extends: Base
 };
 </script>

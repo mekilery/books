@@ -1,43 +1,40 @@
 <template>
   <div>
-    <div v-if="showLabel" :class="labelClasses">
+    <div :class="labelClasses" v-if="showLabel">
       {{ df.label }}
     </div>
     <input
       v-show="showInput"
       ref="input"
-      class="text-end"
+      class="text-right"
       :class="[inputClasses, containerClasses]"
       :type="inputType"
-      :value="round(value)"
+      :value="value?.round()"
       :placeholder="inputPlaceholder"
       :readonly="isReadOnly"
-      :tabindex="isReadOnly ? '-1' : '0'"
       @blur="onBlur"
       @focus="onFocus"
       @input="(e) => $emit('input', e)"
     />
     <div
       v-show="!showInput"
-      class="whitespace-nowrap overflow-x-auto no-scrollbar"
-      :class="[inputClasses, containerClasses]"
-      tabindex="0"
+      class="whitespace-nowrap overflow-x-auto"
+      :class="[inputClasses, containerClasses, ,]"
       @click="activateInput"
       @focus="activateInput"
+      tabindex="0"
     >
       {{ formattedValue }}
     </div>
   </div>
 </template>
-<script lang="ts">
-import { isPesa } from 'fyo/utils';
-import { Money } from 'pesa';
+
+<script>
 import { fyo } from 'src/initFyo';
-import { safeParsePesa } from 'utils/index';
-import { defineComponent, nextTick } from 'vue';
+import { nextTick } from 'vue';
 import Float from './Float.vue';
 
-export default defineComponent({
+export default {
   name: 'Currency',
   extends: Float,
   emits: ['input', 'focus'],
@@ -47,45 +44,23 @@ export default defineComponent({
       currencySymbol: '',
     };
   },
-  computed: {
-    formattedValue() {
-      const value = this.parse(this.value);
-      return fyo.format(value, this.df, this.doc);
-    },
-  },
   methods: {
-    onFocus(e: FocusEvent) {
-      const target = e.target;
-      if (!(target instanceof HTMLInputElement)) {
-        return;
-      }
-
-      target.select();
+    onFocus(e) {
+      e.target.select();
       this.showInput = true;
       this.$emit('focus', e);
     },
-    round(v: unknown) {
-      if (!isPesa(v)) {
-        v = this.parse(v);
-      }
-
-      if (isPesa(v)) {
-        return v.round();
-      }
-
-      return fyo.pesa(0).round();
+    parse(value) {
+      return fyo.pesa(value);
     },
-    parse(value: unknown): Money {
-      return safeParsePesa(value, this.fyo);
-    },
-    onBlur(e: FocusEvent) {
-      const target = e.target;
-      if (!(target instanceof HTMLInputElement)) {
-        return;
+    onBlur(e) {
+      let { value } = e.target;
+      if (value !== 0 && !value) {
+        value = fyo.pesa(0).round();
       }
 
       this.showInput = false;
-      this.triggerChange(target.value);
+      this.triggerChange(value);
     },
     activateInput() {
       if (this.isReadOnly) {
@@ -98,5 +73,10 @@ export default defineComponent({
       });
     },
   },
-});
+  computed: {
+    formattedValue() {
+      return fyo.format(this.value ?? fyo.pesa(0), this.df, this.doc);
+    },
+  },
+};
 </script>

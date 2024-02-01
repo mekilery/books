@@ -1,10 +1,11 @@
 import { Fyo, t } from 'fyo';
 import { NotFoundError, ValidationError } from 'fyo/utils/errors';
+import { Account } from 'models/baseModels/Account/Account';
 import { AccountingLedgerEntry } from 'models/baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { Transactional } from './Transactional';
-import { TransactionType } from './types';
+import { AccountBalanceChange, TransactionType } from './types';
 
 /**
  * # LedgerPosting
@@ -15,7 +16,8 @@ import { TransactionType } from './types';
  * For each account touched in a transactional doc a separate ledger entry is
  * created.
  *
- * This is done using the `debit(...)` and `credit(...)` methods.
+ * This is done using the `debit(...)` and `credit(...)` methods which also
+ * keep track of the change in balance to an account.
  *
  * Unless `post()` or `postReverese()` is called the entries aren't made.
  */
@@ -27,6 +29,7 @@ export class LedgerPosting {
   creditMap: Record<string, AccountingLedgerEntry>;
   debitMap: Record<string, AccountingLedgerEntry>;
   reverted: boolean;
+  accountBalanceChanges: AccountBalanceChange[];
 
   constructor(refDoc: Transactional, fyo: Fyo) {
     this.fyo = fyo;
@@ -35,16 +38,19 @@ export class LedgerPosting {
     this.creditMap = {};
     this.debitMap = {};
     this.reverted = false;
+    this.accountBalanceChanges = [];
   }
 
   async debit(account: string, amount: Money) {
     const ledgerEntry = this._getLedgerEntry(account, 'debit');
     await ledgerEntry.set('debit', ledgerEntry.debit!.add(amount));
+    await this._updateAccountBalanceChange(account, 'debit', amount);
   }
 
   async credit(account: string, amount: Money) {
     const ledgerEntry = this._getLedgerEntry(account, 'credit');
     await ledgerEntry.set('credit', ledgerEntry.credit!.add(amount));
+    await this._updateAccountBalanceChange(account, 'credit', amount);
   }
 
   async post() {
@@ -71,10 +77,30 @@ export class LedgerPosting {
 
     const roundOffAccount = await this._getRoundOffAccount();
     if (difference.gt(0)) {
-      await this.credit(roundOffAccount, absoluteValue);
+      this.credit(roundOffAccount, absoluteValue);
     } else {
-      await this.debit(roundOffAccount, absoluteValue);
+      this.debit(roundOffAccount, absoluteValue);
     }
+  }
+
+  async _updateAccountBalanceChange(
+    name: string,
+    type: TransactionType,
+    amount: Money
+  ) {
+    const accountDoc = (await this.fyo.doc.getDoc('Account', name)) as Account;
+
+    let change: Money;
+    if (accountDoc.isDebit) {
+      change = type === 'debit' ? amount : amount.neg();
+    } else {
+      change = type === 'credit' ? amount : amount.neg();
+    }
+
+    this.accountBalanceChanges.push({
+      name,
+      change,
+    });
   }
 
   _getLedgerEntry(
@@ -139,6 +165,7 @@ export class LedgerPosting {
 
   async _sync() {
     await this._syncLedgerEntries();
+    await this._syncBalanceChanges();
   }
 
   async _syncLedgerEntries() {
@@ -149,6 +176,18 @@ export class LedgerPosting {
 
   async _syncReverse() {
     await this._syncReverseLedgerEntries();
+    for (const entry of this.accountBalanceChanges) {
+      entry.change = (entry.change as Money).neg();
+    }
+    await this._syncBalanceChanges();
+  }
+
+  async _syncBalanceChanges() {
+    for (const { name, change } of this.accountBalanceChanges) {
+      const accountDoc = await this.fyo.doc.getDoc(ModelNameEnum.Account, name);
+      const balance = accountDoc.get('balance') as Money;
+      await accountDoc.setAndSync('balance', balance.add(change));
+    }
   }
 
   async _syncReverseLedgerEntries() {

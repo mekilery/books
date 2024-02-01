@@ -1,36 +1,71 @@
+import * as assert from 'assert';
+import 'mocha';
 import { getRegionalModels, models } from 'models';
 import { getSchemas } from 'schemas';
-import test from 'tape';
-import { getTestFyo } from 'tests/helpers';
+import { Fyo } from '..';
+import { DatabaseManager } from '../../backend/database/manager';
+import { DummyAuthDemux } from './helpers';
 
-test('Fyo Init', async (t) => {
-  const fyo = getTestFyo();
-  t.equal(Object.keys(fyo.schemaMap).length, 0, 'zero schemas');
+describe('Fyo Init', function () {
+  const fyo = new Fyo({
+    DatabaseDemux: DatabaseManager,
+    AuthDemux: DummyAuthDemux,
+    isTest: true,
+    isElectron: false,
+  });
 
-  await fyo.db.createNewDatabase(':memory:', 'in');
-  await fyo.initializeAndRegister({}, {});
+  specify('Init', async function () {
+    assert.strictEqual(
+      Object.keys(fyo.schemaMap).length,
+      0,
+      'zero schemas one'
+    );
 
-  t.equal(Object.keys(fyo.schemaMap).length > 0, true, 'non zero schemas');
-  await fyo.close();
+    assert.strictEqual(
+      Object.keys(fyo.schemaMap).length,
+      0,
+      'zero schemas two'
+    );
+
+    await fyo.db.createNewDatabase(':memory:', 'in');
+    await fyo.initializeAndRegister({}, {});
+    assert.strictEqual(
+      Object.keys(fyo.schemaMap).length > 0,
+      true,
+      'non zero schemas'
+    );
+    await fyo.db.purgeCache();
+  });
 });
 
-test('Fyo Docs', async (t) => {
+describe('Fyo Docs', function () {
   const countryCode = 'in';
-  const fyo = getTestFyo();
-  const schemaMap = getSchemas(countryCode, []);
-  const regionalModels = await getRegionalModels(countryCode);
-  await fyo.db.createNewDatabase(':memory:', countryCode);
-  await fyo.initializeAndRegister(models, regionalModels);
+  let fyo: Fyo;
+  const schemaMap = getSchemas(countryCode);
+  this.beforeEach(async function () {
+    fyo = new Fyo({
+      DatabaseDemux: DatabaseManager,
+      isTest: true,
+      isElectron: false,
+    });
 
-  for (const schemaName in schemaMap) {
-    const schema = schemaMap[schemaName];
-    if (schema?.isSingle) {
-      continue;
+    const regionalModels = await getRegionalModels(countryCode);
+    await fyo.db.createNewDatabase(':memory:', countryCode);
+    await fyo.initializeAndRegister(models, regionalModels);
+  });
+
+  this.afterEach(async function () {
+    await fyo.close();
+  });
+
+  specify('getNewDoc', async function () {
+    for (const schemaName in schemaMap) {
+      const schema = schemaMap[schemaName];
+      if (schema?.isSingle) {
+        continue;
+      }
+
+      const doc = fyo.doc.getNewDoc(schemaName);
     }
-
-    const doc = fyo.doc.getNewDoc(schemaName);
-    t.equal(doc.schemaName, schemaName, `equal schemaNames: ${schemaName}`);
-  }
-
-  await fyo.close();
+  });
 });

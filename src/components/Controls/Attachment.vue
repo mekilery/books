@@ -1,46 +1,41 @@
 <template>
-  <div>
-    <div v-if="showLabel && df" :class="labelClasses">
-      {{ df.label }}
-    </div>
-    <div :class="containerClasses" class="flex gap-2 items-center">
-      <label
-        for="attachment"
-        class="block whitespace-nowrap overflow-auto no-scrollbar"
-        :class="[inputClasses, !value ? 'text-gray-600' : 'cursor-default']"
-        >{{ label }}</label
+  <div :class="containerClasses" class="flex gap-2 items-center">
+    <label
+      for="attachment"
+      class="block whitespace-nowrap overflow-auto no-scrollbar"
+      :class="[inputClasses, !value ? 'text-gray-600' : 'cursor-default']"
+      >{{ label }}</label
+    >
+    <input
+      ref="fileInput"
+      id="attachment"
+      type="file"
+      accept="image/*,.pdf"
+      class="hidden"
+      :disabled="!!value"
+      @input="selectFile"
+    />
+
+    <!-- Buttons -->
+    <div class="mr-2 flex gap-2">
+      <!-- Upload Button -->
+      <button v-if="!value" class="bg-gray-300 p-0.5 rounded" @click="upload">
+        <FeatherIcon name="upload" class="h-4 w-4 text-gray-600" />
+      </button>
+
+      <!-- Download Button -->
+      <button v-if="value" class="bg-gray-300 p-0.5 rounded" @click="download">
+        <FeatherIcon name="download" class="h-4 w-4 text-gray-600" />
+      </button>
+
+      <!-- Clear Button -->
+      <button
+        v-if="value && !isReadOnly"
+        class="bg-gray-300 p-0.5 rounded"
+        @click="clear"
       >
-      <input
-        id="attachment"
-        ref="fileInput"
-        type="file"
-        accept="image/*,.pdf"
-        class="hidden"
-        :disabled="!!value"
-        @input="selectFile"
-      />
-
-      <!-- Buttons -->
-      <div class="me-2 flex gap-1">
-        <!-- Upload Button -->
-        <button v-if="!value" class="p-0.5 rounded" @click="upload">
-          <FeatherIcon name="upload" class="h-4 w-4 text-gray-600" />
-        </button>
-
-        <!-- Download Button -->
-        <button v-if="value" class="p-0.5 rounded" @click="download">
-          <FeatherIcon name="download" class="h-4 w-4 text-gray-600" />
-        </button>
-
-        <!-- Clear Button -->
-        <button
-          v-if="value && !isReadOnly"
-          class="p-0.5 rounded"
-          @click="clear"
-        >
-          <FeatherIcon name="x" class="h-4 w-4 text-gray-600" />
-        </button>
-      </div>
+        <FeatherIcon name="x" class="h-4 w-4 text-gray-600" />
+      </button>
     </div>
   </div>
 </template>
@@ -54,34 +49,12 @@ import FeatherIcon from '../FeatherIcon.vue';
 import Base from './Base.vue';
 
 export default defineComponent({
-  components: { FeatherIcon },
   extends: Base,
   props: {
     df: Object as PropType<Field>,
     value: { type: Object as PropType<Attachment | null>, default: null },
     border: { type: Boolean, default: false },
     size: String,
-  },
-  computed: {
-    label() {
-      if (this.value) {
-        return this.value.name;
-      }
-
-      return this.df?.placeholder ?? this.df?.label ?? t`Attachment`;
-    },
-    inputReadOnlyClasses() {
-      if (!this.value) {
-        return 'text-gray-600';
-      } else if (this.isReadOnly) {
-        return 'text-gray-800 cursor-default';
-      }
-
-      return 'text-gray-900';
-    },
-    containerReadOnlyClasses() {
-      return '';
-    },
   },
   methods: {
     upload() {
@@ -102,7 +75,7 @@ export default defineComponent({
         return;
       }
 
-      const a = document.createElement('a');
+      const a = document.createElement('a') as HTMLAnchorElement;
 
       a.style.display = 'none';
       a.href = data;
@@ -135,5 +108,27 @@ export default defineComponent({
       return { name, type, data };
     },
   },
+  computed: {
+    label() {
+      if (this.value) {
+        return this.value.name;
+      }
+
+      return this.df?.placeholder ?? this.df?.label ?? t`Attachment`;
+    },
+    inputReadOnlyClasses() {
+      if (!this.value) {
+        return 'text-gray-600';
+      } else if (this.isReadOnly) {
+        return 'text-gray-800 cursor-default';
+      }
+
+      return 'text-gray-900';
+    },
+    containerReadOnlyClasses() {
+      return '';
+    },
+  },
+  components: { FeatherIcon },
 });
 </script>

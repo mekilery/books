@@ -1,7 +1,7 @@
-import { t } from 'fyo';
+import { Fyo, t } from 'fyo';
 import { Action } from 'fyo/model/types';
 import { Verb } from 'fyo/telemetry/types';
-import { getSavePath, showExportInFolder } from 'src/utils/ui';
+import { getSavePath, saveData, showExportInFolder } from 'src/utils/ipcCalls';
 import { getIsNullOrUndef } from 'utils';
 import { generateCSV } from 'utils/csvParser';
 import { Report } from './Report';
@@ -52,7 +52,7 @@ async function exportReport(extention: ExportExtention, report: Report) {
     return;
   }
 
-  await saveExportData(data, filePath);
+  await saveExportData(data, filePath, report.fyo);
   report.fyo.telemetry.log(Verb.Exported, report.reportName, { extention });
 }
 
@@ -88,7 +88,7 @@ function getJsonData(report: Report): string {
     }
 
     const rowObj: Record<string, unknown> = {};
-    for (let c = 0; c < row.cells.length; c++) {
+    for (const c in row.cells) {
       const { label } = columns[c];
       const cell = getValueFromCell(row.cells[c], displayPrecision);
       rowObj[label] = cell;
@@ -129,7 +129,7 @@ function convertReportToCSVMatrix(report: Report): unknown[][] {
   const displayPrecision =
     (report.fyo.singles.SystemSettings?.displayPrecision as number) ?? 2;
   const reportData = report.reportData;
-  const columns = report.columns;
+  const columns = report.columns!;
 
   const csvdata: unknown[][] = [];
   csvdata.push(columns.map((c) => c.label));
@@ -140,7 +140,7 @@ function convertReportToCSVMatrix(report: Report): unknown[][] {
     }
 
     const csvrow: unknown[] = [];
-    for (let c = 0; c < row.cells.length; c++) {
+    for (const c in row.cells) {
       const cell = getValueFromCell(row.cells[c], displayPrecision);
       csvrow.push(cell);
     }
@@ -178,12 +178,7 @@ function getValueFromCell(cell: ReportCell, displayPrecision: number) {
   return rawValue;
 }
 
-export async function saveExportData(
-  data: string,
-  filePath: string,
-  message?: string
-) {
-  await ipc.saveData(data, filePath);
-  message ??= t`Export Successful`;
-  showExportInFolder(message, filePath);
+export async function saveExportData(data: string, filePath: string, fyo: Fyo) {
+  await saveData(data, filePath);
+  showExportInFolder(fyo.t`Export Successful`, filePath);
 }

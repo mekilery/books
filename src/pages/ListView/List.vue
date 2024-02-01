@@ -1,5 +1,5 @@
 <template>
-  <div class="text-base flex flex-col overflow-hidden">
+  <div class="text-base flex flex-col overflow-y-hidden">
     <!-- Title Row -->
     <div
       class="flex items-center"
@@ -7,10 +7,10 @@
         paddingRight: dataSlice.length > 13 ? 'var(--w-scrollbar)' : '',
       }"
     >
-      <p class="w-8 text-end me-4 text-gray-700">#</p>
+      <p class="w-8 text-right mr-4 text-gray-700">#</p>
       <Row
-        class="flex-1 text-gray-700 h-row-mid"
-        :column-count="columns.length"
+        class="flex-1 text-gray-700 border-none h-row-mid"
+        :columnCount="columns.length"
         gap="1rem"
       >
         <div
@@ -25,8 +25,8 @@
             flex
           "
           :class="{
-            'ms-auto': isNumeric(column.fieldtype),
-            'pe-4': i === columns.length - 1,
+            'ml-auto': isNumeric(column.fieldtype),
+            'pr-4': i === columns.length - 1,
           }"
         >
           {{ column.label }}
@@ -36,27 +36,27 @@
     <hr />
 
     <!-- Data Rows -->
-    <div v-if="dataSlice.length !== 0" class="overflow-y-auto custom-scroll">
-      <div v-for="(row, i) in dataSlice" :key="(row.name as string)">
+    <div class="overflow-y-auto custom-scroll" v-if="dataSlice.length !== 0">
+      <div v-for="(doc, i) in dataSlice" :key="doc.name">
         <!-- Row Content -->
         <div class="flex hover:bg-gray-50 items-center">
-          <p class="w-8 text-end me-4 text-gray-900">
+          <p class="w-8 text-right mr-4 text-gray-900">
             {{ i + pageStart + 1 }}
           </p>
           <Row
             gap="1rem"
-            class="cursor-pointer text-gray-900 flex-1 h-row-mid"
-            :column-count="columns.length"
-            @click="$emit('openDoc', row.name)"
+            class="cursor-pointer text-gray-900 flex-1 border-none h-row-mid"
+            @click="openForm(doc)"
+            :columnCount="columns.length"
           >
             <ListCell
               v-for="(column, c) in columns"
               :key="column.label"
               :class="{
-                'text-end': isNumeric(column.fieldtype),
-                'pe-4': c === columns.length - 1,
+                'text-right': isNumeric(column.fieldtype),
+                'pr-4': c === columns.length - 1,
               }"
-              :row="(row as RenderData)"
+              :doc="doc"
               :column="column"
             />
           </Row>
@@ -66,12 +66,12 @@
     </div>
 
     <!-- Pagination Footer -->
-    <div v-if="data?.length" class="mt-auto">
+    <div class="mt-auto" v-if="data?.length">
       <hr />
       <Paginator
         :item-count="data.length"
-        class="px-4"
         @index-change="setPageIndices"
+        class="px-4"
       />
     </div>
 
@@ -80,55 +80,46 @@
       v-if="!data?.length"
       class="flex flex-col items-center justify-center my-auto"
     >
-      <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
+      <img src="@/assets/img/list-empty-state.svg" alt="" class="w-24" />
       <p class="my-3 text-gray-800">{{ t`No entries found` }}</p>
-      <Button
-        v-if="canCreate"
-        type="primary"
-        class="text-white"
-        @click="$emit('makeNewDoc')"
-      >
+      <Button type="primary" class="text-white" @click="$emit('makeNewDoc')">
         {{ t`Make Entry` }}
       </Button>
     </div>
   </div>
 </template>
-<script lang="ts">
-import { ListViewSettings, RenderData } from 'fyo/model/types';
-import { cloneDeep } from 'lodash';
-import Button from 'src/components/Button.vue';
+<script>
+import Button from 'src/components/Button';
 import Paginator from 'src/components/Paginator.vue';
-import Row from 'src/components/Row.vue';
+import Row from 'src/components/Row';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
-import { QueryFilter } from 'utils/db/types';
-import { PropType, defineComponent } from 'vue';
-import ListCell from './ListCell.vue';
+import { openQuickEdit, routeTo } from 'src/utils/ui';
+import { defineComponent } from 'vue';
+import ListCell from './ListCell';
 
 export default defineComponent({
   name: 'List',
+  props: { listConfig: Object, filters: Object, schemaName: String },
+  emits: ['makeNewDoc', 'updatedData'],
   components: {
     Row,
     ListCell,
     Button,
     Paginator,
   },
-  props: {
-    listConfig: {
-      type: Object as PropType<ListViewSettings | undefined>,
-      default: () => ({ columns: [] }),
+  watch: {
+    schemaName(oldValue, newValue) {
+      if (oldValue === newValue) {
+        return;
+      }
+
+      this.updateData();
     },
-    filters: {
-      type: Object as PropType<QueryFilter>,
-      default: () => ({}),
-    },
-    schemaName: { type: String, required: true },
-    canCreate: Boolean,
   },
-  emits: ['openDoc', 'makeNewDoc', 'updatedData'],
   data() {
     return {
-      data: [] as RenderData[],
+      data: [],
       pageStart: 0,
       pageEnd: 0,
     };
@@ -144,7 +135,7 @@ export default defineComponent({
       let columns = this.listConfig?.columns ?? [];
 
       if (columns.length === 0) {
-        columns = fyo.schemaMap[this.schemaName]?.quickEditFields ?? [];
+        columns = fyo.schemaMap[this.schemaName].quickEditFields ?? [];
         columns = [...new Set(['name', ...columns])];
       }
 
@@ -159,22 +150,13 @@ export default defineComponent({
         .filter(Boolean);
     },
   },
-  watch: {
-    async schemaName(oldValue, newValue) {
-      if (oldValue === newValue) {
-        return;
-      }
-
-      await this.updateData();
-    },
-  },
   async mounted() {
     await this.updateData();
     this.setUpdateListeners();
   },
   methods: {
     isNumeric,
-    setPageIndices({ start, end }: { start: number; end: number }) {
+    setPageIndices({ start, end }) {
       this.pageStart = start;
       this.pageEnd = end;
     },
@@ -183,11 +165,11 @@ export default defineComponent({
         return;
       }
 
-      const listener = async () => {
-        await this.updateData();
+      const listener = () => {
+        this.updateData();
       };
 
-      if (fyo.schemaMap[this.schemaName]?.isSubmittable) {
+      if (fyo.schemaMap[this.schemaName].isSubmittable) {
         fyo.doc.observer.on(`submit:${this.schemaName}`, listener);
         fyo.doc.observer.on(`revert:${this.schemaName}`, listener);
       }
@@ -196,29 +178,33 @@ export default defineComponent({
       fyo.db.observer.on(`delete:${this.schemaName}`, listener);
       fyo.doc.observer.on(`rename:${this.schemaName}`, listener);
     },
-    async updateData(filters?: Record<string, unknown>) {
+    openForm(doc) {
+      if (this.listConfig.formRoute) {
+        routeTo(this.listConfig.formRoute(doc.name));
+        return;
+      }
+
+      openQuickEdit({
+        schemaName: this.schemaName,
+        name: doc.name,
+      });
+    },
+    async updateData(filters) {
       if (!filters) {
         filters = { ...this.filters };
       }
 
-      // Unproxy the filters
-      filters = cloneDeep(filters);
+      const orderBy = !!fyo.getField(this.schemaName, 'date')
+        ? 'date'
+        : 'created';
 
-      const orderBy = ['created'];
-      if (fyo.db.fieldMap[this.schemaName]['date']) {
-        orderBy.unshift('date');
-      }
-
-      const tableData = await fyo.db.getAll(this.schemaName, {
-        fields: ['*'],
-        filters: filters as QueryFilter,
-        orderBy,
-      });
-
-      this.data = tableData.map((d) => ({
-        ...d,
-        schema: fyo.schemaMap[this.schemaName],
-      })) as RenderData[];
+      this.data = (
+        await fyo.db.getAll(this.schemaName, {
+          fields: ['*'],
+          filters,
+          orderBy,
+        })
+      ).map((d) => ({ ...d, schema: fyo.schemaMap[this.schemaName] }));
       this.$emit('updatedData', filters);
     },
   },

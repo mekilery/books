@@ -1,56 +1,28 @@
-import { PropertyEnum } from "utils/types";
+export enum FieldTypeEnum {
+  Data = 'Data',
+  Select = 'Select',
+  Link = 'Link',
+  Date = 'Date',
+  Datetime = 'Datetime',
+  Table = 'Table',
+  AutoComplete = 'AutoComplete',
+  Check = 'Check',
+  AttachImage = 'AttachImage',
+  DynamicLink = 'DynamicLink',
+  Int = 'Int',
+  Float = 'Float',
+  Currency = 'Currency',
+  Text = 'Text',
+  Color = 'Color',
+  Attachment = 'Attachment',
+}
 
-export type FieldType =
-  | 'Data'
-  | 'Select'
-  | 'Link'
-  | 'Date'
-  | 'Datetime'
-  | 'Table'
-  | 'AutoComplete'
-  | 'Check'
-  | 'AttachImage'
-  | 'DynamicLink'
-  | 'Int'
-  | 'Float'
-  | 'Currency'
-  | 'Text'
-  | 'Color'
-  | 'Attachment';
-
-export const FieldTypeEnum: PropertyEnum<Record<FieldType, FieldType>> = {
-  Data: 'Data',
-  Select: 'Select',
-  Link: 'Link',
-  Date: 'Date',
-  Datetime: 'Datetime',
-  Table: 'Table',
-  AutoComplete: 'AutoComplete',
-  Check: 'Check',
-  AttachImage: 'AttachImage',
-  DynamicLink: 'DynamicLink',
-  Int: 'Int',
-  Float: 'Float',
-  Currency: 'Currency',
-  Text: 'Text',
-  Color: 'Color',
-  Attachment: 'Attachment',
-};
-
-type OptionFieldType = 'Select' | 'AutoComplete' | 'Color';
-type TargetFieldType = 'Table' | 'Link';
-type NumberFieldType = 'Int' | 'Float';
-type DynamicLinkFieldType = 'DynamicLink';
-type BaseFieldType = Exclude<
-  FieldType,
-  TargetFieldType | DynamicLinkFieldType | OptionFieldType | NumberFieldType
->;
-
+export type FieldType = keyof typeof FieldTypeEnum;
 export type RawValue = string | number | boolean | null;
 
 export interface BaseField {
   fieldname: string;             // Column name in the db
-  fieldtype: BaseFieldType;      // UI Descriptive field types that map to column types
+  fieldtype: FieldType;          // UI Descriptive field types that map to column types
   label: string;                 // Translateable UI facing name
   schemaName?: string;           // Convenient access to schemaName incase just the field is passed
   required?: boolean;            // Implies Not Null
@@ -61,35 +33,37 @@ export interface BaseField {
   placeholder?: string;          // UI Facing config, form field placeholder
   groupBy?: string;              // UI Facing used in dropdowns fields
   meta?: boolean;                // Field is a meta field, i.e. only for the db, not UI
-  filter?: boolean;              // UI Facing config, whether to be used to filter the List.
+  inline?: boolean;              // UI Facing config, whether to display doc inline.
+  filter?: boolean;               // UI Facing config, whether to be used to filter the List.
   computed?: boolean;            // Computed values are not stored in the database.
-  section?: string;              // UI Facing config, for grouping by sections
-  tab?: string;                  // UI Facing config, for grouping by tabs
-  abstract?: string;             // Used to mark the location of a field in an Abstract schema 
-  isCustom?: boolean;            // Whether the field is a custom field
 }
 
 export type SelectOption = { value: string; label: string };
-export interface OptionField extends Omit<BaseField, 'fieldtype'> {
-  fieldtype: OptionFieldType;
+export interface OptionField extends BaseField {
+  fieldtype:
+    | FieldTypeEnum.Select
+    | FieldTypeEnum.AutoComplete
+    | FieldTypeEnum.Color;
   options: SelectOption[];
+  emptyMessage?: string;
   allowCustom?: boolean;
 }
 
-export interface TargetField extends Omit<BaseField, 'fieldtype'> {
-  fieldtype: TargetFieldType;
+export interface TargetField extends BaseField {
+  fieldtype: FieldTypeEnum.Table | FieldTypeEnum.Link;
   target: string;                // Name of the table or group of tables to fetch values
   create?: boolean;              // Whether to show Create in the dropdown
   edit?: boolean;                // Whether the Table has quick editable columns
 }
 
-export interface DynamicLinkField extends Omit<BaseField, 'fieldtype'> {
-  fieldtype: DynamicLinkFieldType;
+export interface DynamicLinkField extends BaseField {
+  fieldtype: FieldTypeEnum.DynamicLink;
+  emptyMessage?: string;
   references: string;            // Reference to an option field that links to schema
 }
 
-export interface NumberField extends Omit<BaseField, 'fieldtype'> {
-  fieldtype: NumberFieldType;
+export interface NumberField extends BaseField {
+  fieldtype: FieldTypeEnum.Float | FieldTypeEnum.Int;
   minvalue?: number;             // UI Facing used to restrict lower bound
   maxvalue?: number;             // UI Facing used to restrict upper bound
 }
@@ -116,8 +90,7 @@ export interface Schema {
   isSubmittable?: boolean;       // For transactional types, values considered only after submit
   keywordFields?: string[];      // Used to get fields that are to be used for search.
   quickEditFields?: string[];    // Used to get fields for the quickEditForm
-  linkDisplayField?:string;      // Display field if inline editable
-  create?: boolean               // Whether the user can create an entry from the ListView
+  inlineEditDisplayField?:string;// Display field if inline editable
   naming?: Naming;               // Used for assigning name, default is 'random' else 'numberSeries' if present
   titleField?: string;           // Main display field
   removeFields?: string[];       // Used by the builder to remove fields.

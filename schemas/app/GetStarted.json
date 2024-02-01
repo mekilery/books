@@ -19,8 +19,8 @@
       "fieldtype": "Check"
     },
     {
-      "fieldname": "printSetup",
-      "label": "Print Setup",
+      "fieldname": "invoiceSetup",
+      "label": "Invoice Setup",
       "fieldtype": "Check"
     },
     {

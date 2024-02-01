@@ -8,13 +8,13 @@ import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoi
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import setupInstance from 'src/setup/setupInstance';
-import { getMapFromList, safeParseInt } from 'utils';
+import { getMapFromList } from 'utils';
 import { getFiscalYear } from 'utils/misc';
 import {
   flow,
   getFlowConstant,
   getRandomDates,
-  purchaseItemPartyMap,
+  purchaseItemPartyMap
 } from './helpers';
 import items from './items.json';
 import logo from './logo';
@@ -25,8 +25,8 @@ type Notifier = (stage: string, percent: number) => void;
 export async function setupDummyInstance(
   dbPath: string,
   fyo: Fyo,
-  years = 1,
-  baseCount = 1000,
+  years: number = 1,
+  baseCount: number = 1000,
   notifier?: Notifier
 ) {
   await fyo.purgeCache();
@@ -39,8 +39,8 @@ export async function setupDummyInstance(
     email: 'lin@flosclothes.com',
     bankName: 'Supreme Bank',
     currency: 'INR',
-    fiscalYearStart: getFiscalYear('04-01', true)!.toISOString(),
-    fiscalYearEnd: getFiscalYear('04-01', false)!.toISOString(),
+    fiscalYearStart: getFiscalYear('04-01', true),
+    fiscalYearEnd: getFiscalYear('04-01', false),
     chartOfAccounts: 'India - Chart of Accounts',
   };
   await setupInstance(dbPath, options, fyo);
@@ -56,7 +56,6 @@ export async function setupDummyInstance(
     ModelNameEnum.SystemSettings,
     'instanceId'
   )) as string;
-  await fyo.singles.SystemSettings?.setAndSync('hideGetStarted', true);
 
   fyo.store.skipTelemetryLogging = false;
   return { companyName: options.companyName, instanceId };
@@ -252,12 +251,12 @@ async function getSalesInvoices(
    * For each date create a Sales Invoice.
    */
 
-  for (let d = 0; d < dates.length; d++) {
+  for (const d in dates) {
     const date = dates[d];
 
     notifier?.(
       `Creating Sales Invoices, ${d} out of ${dates.length}`,
-      safeParseInt(d) / dates.length
+      parseInt(d) / dates.length
     );
     const customer = sample(customers);
 
@@ -425,7 +424,7 @@ async function getSalesPurchaseInvoices(
       for (const item of supplierGrouped[supplier]) {
         await doc.append('items', {});
         const quantity = purchaseQty[item];
-        await doc.items!.at(-1)!.set({ item, quantity });
+        doc.items!.at(-1)!.set({ item, quantity });
       }
 
       invoices.push(doc);
@@ -528,11 +527,11 @@ async function syncAndSubmit(docs: Doc[], notifier?: Notifier) {
   };
 
   const total = docs.length;
-  for (let i = 0; i < docs.length; i++) {
+  for (const i in docs) {
     const doc = docs[i];
     notifier?.(
       `Syncing ${nameMap[doc.schemaName]}, ${i} out of ${total}`,
-      safeParseInt(i) / total
+      parseInt(i) / total
     );
     await doc.sync();
     await doc.submit();

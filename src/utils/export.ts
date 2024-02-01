@@ -1,18 +1,12 @@
 import { Fyo } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
-import {
-  Field,
-  FieldType,
-  FieldTypeEnum,
-  RawValue,
-  TargetField,
-} from 'schemas/types';
+import { Field, FieldTypeEnum, RawValue, TargetField } from 'schemas/types';
 import { generateCSV } from 'utils/csvParser';
 import { GetAllOptions, QueryFilter } from 'utils/db/types';
-import { getMapFromList, safeParseFloat } from 'utils/index';
+import { getMapFromList } from 'utils/index';
 import { ExportField, ExportTableField } from './types';
 
-const excludedFieldTypes: FieldType[] = [
+const excludedFieldTypes = [
   FieldTypeEnum.AttachImage,
   FieldTypeEnum.Attachment,
 ];
@@ -32,7 +26,7 @@ export function getExportFields(
     .filter((f) => !f.computed && f.label && !exclude.includes(f.fieldname))
     .map((field) => {
       const { fieldname, label } = field;
-      const fieldtype = field.fieldtype as FieldType;
+      const fieldtype = field.fieldtype as FieldTypeEnum;
       return {
         fieldname,
         fieldtype,
@@ -118,7 +112,7 @@ export async function getCsvExportData(
 
     const tableFieldRowMap = parentNameMap[parentName];
     if (!tableFieldRowMap || !Object.keys(tableFieldRowMap ?? {}).length) {
-      rows.push([baseRowData, headers.child.map(() => '')].flat());
+      rows.push([baseRowData, headers.child.map((_) => '')].flat());
       continue;
     }
 
@@ -266,11 +260,9 @@ async function getParentData(
   limit: number | null,
   fyo: Fyo
 ) {
-  const orderBy = ['created'];
-  if (fyo.db.fieldMap[schemaName]['date']) {
-    orderBy.unshift('date');
-  }
-
+  const orderBy = !!fields.find((f) => f.fieldname === 'date')
+    ? 'date'
+    : 'created';
   const options: GetAllOptions = { filters, orderBy, order: 'desc' };
   if (limit) {
     options.limit = limit;
@@ -329,14 +321,14 @@ async function getChildTableData(
   return data;
 }
 
-function convertRawPesaToFloat(data: RawValueMap[], fields: ExportField[]) {
+function convertRawPesaToFloat(data: RawValueMap[], fields: Field[]) {
   const currencyFields = fields.filter(
     (f) => f.fieldtype === FieldTypeEnum.Currency
   );
 
   for (const row of data) {
     for (const { fieldname } of currencyFields) {
-      row[fieldname] = safeParseFloat((row[fieldname] ?? '0') as string);
+      row[fieldname] = parseFloat((row[fieldname] ?? '0') as string);
     }
   }
 }

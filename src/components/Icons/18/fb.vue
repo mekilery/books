@@ -21,7 +21,7 @@
   </svg>
 </template>
 <script>
-import Base from '../base.vue';
+import Base from '../base';
 export default {
   name: 'FB',
   extends: Base,

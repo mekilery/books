@@ -1,40 +1,47 @@
 <template>
   <div class="flex flex-col">
     <PageHeader :title="title">
-      <Button ref="exportButton" :icon="false" @click="openExportModal = true">
+      <Button :icon="false" @click="openExportModal = true">
         {{ t`Export` }}
       </Button>
       <FilterDropdown
         ref="filterDropdown"
-        :schema-name="schemaName"
         @change="applyFilter"
+        :schema-name="schemaName"
       />
       <Button
-        v-if="canCreate"
-        ref="makeNewDocButton"
         :icon="true"
         type="primary"
+        @click="openPos"
         :padding="false"
         class="px-3"
+        v-if="this.schemaName === 'SalesInvoice'"        
+      >
+        <feather-icon name="layout" class="w-4 h-4" />
+        <span class="ml-1">{{ t`Open POS` }} </span>
+        
+      </Button>
+      <Button
+        :icon="true"
+        type="primary"
         @click="makeNewDoc"
+        :padding="false"
+        class="px-3"
       >
         <feather-icon name="plus" class="w-4 h-4" />
       </Button>
     </PageHeader>
     <List
       ref="list"
-      :schema-name="schemaName"
-      :list-config="listConfig"
+      :schemaName="schemaName"
+      :listConfig="listConfig"
       :filters="filters"
-      :can-create="canCreate"
       class="flex-1 flex h-full"
-      @open-doc="openDoc"
-      @updated-data="updatedData"
-      @make-new-doc="makeNewDoc"
+      @updatedData="updatedData"
+      @makeNewDoc="makeNewDoc"
     />
     <Modal :open-modal="openExportModal" @closemodal="openExportModal = false">
       <ExportWizard
-        class="w-form"
         :schema-name="schemaName"
         :title="pageTitle"
         :list-filters="listFilters"
@@ -42,27 +49,25 @@
     </Modal>
   </div>
 </template>
-<script lang="ts">
-import { Field } from 'schemas/types';
+<script>
 import Button from 'src/components/Button.vue';
 import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
 import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
-import { shortcutsKey } from 'src/utils/injectionKeys';
-import {
-  docsPathMap,
-  getCreateFiltersFromListViewFilters,
-} from 'src/utils/misc';
-import { docsPathRef } from 'src/utils/refs';
-import { getFormRoute, routeTo } from 'src/utils/ui';
-import { QueryFilter } from 'utils/db/types';
-import { defineComponent, inject, ref } from 'vue';
-import List from './List.vue';
+import { docsPathMap } from 'src/utils/misc';
+import { docsPath, routeTo } from 'src/utils/ui';
+import { ModelNameEnum } from '../../../models/types';
+import List from './List';
 
-export default defineComponent({
+export default {
   name: 'ListView',
+  props: {
+    schemaName: String,
+    filters: Object,
+    pageTitle: { type: String, default: '' },
+  },
   components: {
     PageHeader,
     List,
@@ -71,106 +76,85 @@ export default defineComponent({
     Modal,
     ExportWizard,
   },
-  props: {
-    schemaName: { type: String, required: true },
-    filters: { type: Object, default: undefined },
-    pageTitle: { type: String, default: '' },
-  },
-  setup() {
-    return {
-      shortcuts: inject(shortcutsKey),
-      list: ref<InstanceType<typeof List> | null>(null),
-      makeNewDocButton: ref<InstanceType<typeof Button> | null>(null),
-      exportButton: ref<InstanceType<typeof Button> | null>(null),
-      filterDropdown: ref<InstanceType<typeof FilterDropdown> | null>(null),
-    };
-  },
   data() {
     return {
       listConfig: undefined,
       openExportModal: false,
       listFilters: {},
-    } as {
-      listConfig: undefined | ReturnType<typeof getListConfig>;
-      openExportModal: boolean;
-      listFilters: QueryFilter;
     };
   },
-  computed: {
-    context(): string {
-      return 'ListView-' + this.schemaName;
-    },
-    title(): string {
-      if (this.pageTitle) {
-        return this.pageTitle;
-      }
-
-      return fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
-    },
-    fields(): Field[] {
-      return fyo.schemaMap[this.schemaName]?.fields ?? [];
-    },
-    canCreate(): boolean {
-      return fyo.schemaMap[this.schemaName]?.create !== false;
-    },
-  },
-  activated() {
+  async activated() {
     if (typeof this.filters === 'object') {
-      this.filterDropdown?.setFilter(this.filters, true);
+      this.$refs.filterDropdown.setFilter(this.filters, true);
     }
 
     this.listConfig = getListConfig(this.schemaName);
-    docsPathRef.value =
-      docsPathMap[this.schemaName] ?? docsPathMap.Entries ?? '';
-
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.lv = this;
-    }
-
-    this.setShortcuts();
+    docsPath.value = docsPathMap[this.schemaName] ?? docsPathMap.Entries;
   },
   deactivated() {
-    docsPathRef.value = '';
-    this.shortcuts?.delete(this.context);
+    docsPath.value = '';
   },
   methods: {
-    setShortcuts() {
-      if (!this.shortcuts) {
-        return;
-      }
-
-      this.shortcuts.pmod.set(this.context, ['KeyN'], () =>
-        this.makeNewDocButton?.$el.click()
-      );
-      this.shortcuts.pmod.set(this.context, ['KeyE'], () =>
-        this.exportButton?.$el.click()
-      );
-    },
-    updatedData(listFilters: QueryFilter) {
+    updatedData(listFilters) {
       this.listFilters = listFilters;
     },
-    async openDoc(name: string) {
-      const route = getFormRoute(this.schemaName, name);
-      await routeTo(route);
-    },
     async makeNewDoc() {
-      if (!this.canCreate) {
-        return;
+      const doc = await fyo.doc.getNewDoc(this.schemaName, this.filters ?? {});
+      const path = this.getFormPath(doc.name);      
+      routeTo(path);      
+      doc.on('afterSync', () => {
+        const path = this.getFormPath(doc.name);        
+        this.$router.replace(path);
+      });
+    },
+    //Need review. Badly implemented code
+    async openPos() {
+      const doc = await fyo.doc.getNewDoc(ModelNameEnum.SalesInvoice, this.filters ?? {});
+      //Need to understand a better method from Frappe Team.
+      const path =  `/pos/SalesInvoice/${doc.name}`;      
+      routeTo(path);
+      doc.on('afterSync', () => {
+        const path =  `/pos/SalesInvoice/${doc.name}`;
+        this.$router.replace(path);
+      });      
+    },
+    applyFilter(filters) {
+      this.$refs.list.updateData(filters);
+    },
+    getFormPath(name) {
+      let path = {
+        path: `/list/${this.schemaName}`,
+        query: {
+          edit: 1,
+          schemaName: this.schemaName,
+          name,
+        },
+      };
+
+      if (this.listConfig.formRoute) {
+        path = this.listConfig.formRoute(name);
       }
 
-      const filters = getCreateFiltersFromListViewFilters(this.filters ?? {});
-      const doc = fyo.doc.getNewDoc(this.schemaName, filters);
-      const route = getFormRoute(this.schemaName, doc.name!);
-      await routeTo(route);
-    },
-    applyFilter(filters: QueryFilter) {
-      this.list?.updateData(filters);
+      // Maintain filter if present
+      const currentPath = this.$router.currentRoute.value.path;
+      if (currentPath.slice(0, path?.path?.length ?? 0) === path.path) {
+        path.path = currentPath;
+      }
+
+      return path;
     },
   },
-});
+  computed: {
+    title() {
+      return this.pageTitle || fyo.schemaMap[this.schemaName].label;
+    },
+    fields() {
+      return fyo.schemaMap[this.schemaName].fields;
+    }    
+  },
+};
 
-function getListConfig(schemaName: string) {
+function getListConfig(schemaName) {
   const listConfig = fyo.models[schemaName]?.getListViewSettings?.(fyo);
   if (listConfig?.columns === undefined) {
     return {

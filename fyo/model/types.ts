@@ -1,17 +1,9 @@
-import type { Fyo } from 'fyo';
-import type { DocValue, DocValueMap } from 'fyo/core/types';
-import type SystemSettings from 'fyo/models/SystemSettings';
-import type { FieldType, Schema, SelectOption } from 'schemas/types';
-import type { QueryFilter } from 'utils/db/types';
-import type { RouteLocationRaw, Router } from 'vue-router';
-import type { Doc } from './doc';
-import type { AccountingSettings } from 'models/baseModels/AccountingSettings/AccountingSettings';
-import type { Defaults } from 'models/baseModels/Defaults/Defaults';
-import type { PrintSettings } from 'models/baseModels/PrintSettings/PrintSettings';
-import type { InventorySettings } from 'models/inventory/InventorySettings';
-import type { Misc } from 'models/baseModels/Misc';
-import type { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
-import type { POSShift } from 'models/inventory/Point of Sale/POSShift';
+import { DocValue, DocValueMap } from 'fyo/core/types';
+import SystemSettings from 'fyo/models/SystemSettings';
+import { FieldType, Schema, SelectOption } from 'schemas/types';
+import { QueryFilter } from 'utils/db/types';
+import { Router } from 'vue-router';
+import { Doc } from './doc';
 
 /**
  * The functions below are used for dynamic evaluation
@@ -54,13 +46,6 @@ export type DocMap = Record<string, Doc | undefined>;
 
 export interface SinglesMap {
   SystemSettings?: SystemSettings;
-  AccountingSettings?: AccountingSettings;
-  InventorySettings?: InventorySettings;
-  POSSettings?: POSSettings;
-  POSShift?: POSShift;
-  PrintSettings?: PrintSettings;
-  Defaults?: Defaults;
-  Misc?: Misc;
   [key: string]: Doc | undefined;
 }
 
@@ -77,12 +62,10 @@ export type ListsMap = Record<string, ListFunction | undefined>;
 
 export interface Action {
   label: string;
-  action: (doc: Doc, router: Router) => Promise<void> | void | unknown;
+  action: (doc: Doc, router: Router) => Promise<void> | void;
   condition?: (doc: Doc) => boolean;
-  group?: string;
-  type?: 'primary' | 'secondary';
   component?: {
-    template: string;
+    template?: string;
   };
 }
 
@@ -91,17 +74,18 @@ export interface RenderData {
   [key: string]: DocValue | Schema
 }
 
-export type ColumnConfig = {
+export interface ColumnConfig {
   label: string;
   fieldtype: FieldType;
-  fieldname: string;
+  fieldname?: string;
+  size?: string;
   render?: (doc: RenderData) => { template: string };
-  display?: (value: unknown, fyo: Fyo) => string;
+  getValue?: (doc: Doc) => string;
 }
 
 export type ListViewColumn = string | ColumnConfig;
 export interface ListViewSettings {
-  formRoute?: (name: string) => RouteLocationRaw;
+  formRoute?: (name: string) => string;
   columns?: ListViewColumn[];
 }
 

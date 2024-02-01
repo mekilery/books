@@ -1,14 +1,17 @@
 import { constants } from 'fs';
 import fs from 'fs/promises';
-import { ConfigFile } from 'fyo/core/types';
+import { ConfigFile, ConfigKeys } from 'fyo/core/types';
 import { Main } from 'main';
 import config from 'utils/config';
 import { BackendResponse } from 'utils/ipc/types';
 import { IPC_CHANNELS } from 'utils/messages';
-import type { ConfigFilesWithModified } from 'utils/types';
+
+interface ConfigFilesWithModified extends ConfigFile {
+  modified: string;
+}
 
 export async function setAndGetCleanedConfigFiles() {
-  const files = config.get('files', []);
+  const files = config.get(ConfigKeys.Files, []) as ConfigFile[];
 
   const cleanedFileMap: Map<string, ConfigFile> = new Map();
   for (const file of files) {
@@ -30,7 +33,7 @@ export async function setAndGetCleanedConfigFiles() {
   }
 
   const cleanedFiles = Array.from(cleanedFileMap.values());
-  config.set('files', cleanedFiles);
+  config.set(ConfigKeys.Files, cleanedFiles);
   return cleanedFiles;
 }
 
@@ -50,9 +53,7 @@ export async function getConfigFilesWithModified(files: ConfigFile[]) {
   return filesWithModified;
 }
 
-export async function getErrorHandledReponse(
-  func: () => Promise<unknown> | unknown
-) {
+export async function getErrorHandledReponse(func: () => Promise<unknown>) {
   const response: BackendResponse = {};
 
   try {

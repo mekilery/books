@@ -43,8 +43,6 @@ export abstract class DatabaseBase {
 
   // Delete
   abstract delete(schemaName: string, name: string): Promise<void>;
-  
-  abstract deleteAll(schemaName:string, filters:QueryFilter): Promise<number>;
 
   // Other
   abstract close(): Promise<void>;
@@ -59,14 +57,14 @@ export interface GetAllOptions {
   filters?: QueryFilter;
   offset?: number;
   limit?: number;
-  groupBy?: string | string[];
-  orderBy?: string | string[];
+  groupBy?: string;
+  orderBy?: string;
   order?: 'asc' | 'desc';
 }
 
 export type QueryFilter = Record<
   string,
-  boolean | string | null | (string | number | (string | number | null)[])[]
+  boolean | string | (string | number | (string | number)[])[]
 >;
 
 /**
@@ -93,15 +91,3 @@ export abstract class DatabaseDemuxBase {
 
   abstract callBespoke(method: string, ...args: unknown[]): Promise<unknown>;
 }
-
-// Return types of Bespoke Queries
-export type TopExpenses = { account: string; total: number }[];
-export type TotalOutstanding = { total: number; outstanding: number };
-export type Cashflow = { inflow: number; outflow: number; yearmonth: string }[];
-export type Balance = { balance: number; yearmonth: string }[];
-export type IncomeExpense = { income: Balance; expense: Balance };
-export type TotalCreditAndDebit = {
-  account: string;
-  totalCredit: number;
-  totalDebit: number;
-};

@@ -7,20 +7,21 @@ import { isPesa } from 'fyo/utils';
 import {
   BaseError,
   DuplicateEntryError,
-  LinkValidationError,
+  LinkValidationError
 } from 'fyo/utils/errors';
-import { Field, FieldType, FieldTypeEnum, NumberField } from 'schemas/types';
+import { Money } from 'pesa';
+import { Field, FieldType, FieldTypeEnum } from 'schemas/types';
 import { fyo } from 'src/initFyo';
 
 export function stringifyCircular(
   obj: unknown,
-  ignoreCircular = false,
-  convertDocument = false
-): string {
+  ignoreCircular: boolean = false,
+  convertDocument: boolean = false
+) {
   const cacheKey: string[] = [];
   const cacheValue: unknown[] = [];
 
-  return JSON.stringify(obj, (key: string, value: unknown) => {
+  return JSON.stringify(obj, (key, value) => {
     if (typeof value !== 'object' || value === null) {
       cacheKey.push(key);
       cacheValue.push(value);
@@ -84,7 +85,7 @@ export function convertPesaValuesToFloat(obj: Record<string, unknown>) {
       return;
     }
 
-    obj[key] = value.float;
+    obj[key] = (value as Money).float;
   });
 }
 
@@ -111,13 +112,7 @@ export function getErrorMessage(e: Error, doc?: Doc): string {
   return errorMessage;
 }
 
-export function isNumeric(
-  fieldtype: FieldType
-): fieldtype is NumberField['fieldtype'];
-export function isNumeric(fieldtype: Field): fieldtype is NumberField;
-export function isNumeric(
-  fieldtype: Field | FieldType
-): fieldtype is NumberField | NumberField['fieldtype'] {
+export function isNumeric(fieldtype: Field | FieldType): boolean {
   if (typeof fieldtype !== 'string') {
     fieldtype = fieldtype?.fieldtype;
   }

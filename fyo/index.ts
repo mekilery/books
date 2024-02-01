@@ -1,5 +1,5 @@
 import { getMoneyMaker, MoneyMaker } from 'pesa';
-import { Field, FieldType } from 'schemas/types';
+import { Field } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
 import { markRaw } from 'vue';
 import { AuthHandler } from './core/authHandler';
@@ -13,14 +13,12 @@ import { TelemetryManager } from './telemetry/telemetry';
 import {
   DEFAULT_CURRENCY,
   DEFAULT_DISPLAY_PRECISION,
-  DEFAULT_INTERNAL_PRECISION,
+  DEFAULT_INTERNAL_PRECISION
 } from './utils/consts';
 import * as errors from './utils/errors';
 import { format } from './utils/format';
 import { t, T } from './utils/translation';
 import { ErrorLog } from './utils/types';
-import type { reports } from 'reports/index';
-import type { Report } from 'reports/Report';
 
 export class Fyo {
   t = t;
@@ -35,7 +33,7 @@ export class Fyo {
   doc: DocHandler;
   db: DatabaseHandler;
 
-  _initialized = false;
+  _initialized: boolean = false;
 
   errorLog: ErrorLog[] = [];
   temp?: Record<string, unknown>;
@@ -86,17 +84,14 @@ export class Fyo {
     return this.db.schemaMap;
   }
 
-  get fieldMap() {
-    return this.db.fieldMap;
-  }
-
-  format(value: unknown, field: FieldType | Field, doc?: Doc) {
+  format(value: DocValue, field: string | Field, doc?: Doc) {
     return format(value, field, doc ?? null, this);
   }
 
-  setIsElectron() {
+  async setIsElectron() {
     try {
-      this.isElectron = !!window?.ipc;
+      const { ipcRenderer } = await import('electron');
+      this.isElectron = Boolean(ipcRenderer);
     } catch {
       this.isElectron = false;
     }
@@ -105,7 +100,7 @@ export class Fyo {
   async initializeAndRegister(
     models: ModelMap = {},
     regionalModels: ModelMap = {},
-    force = false
+    force: boolean = false
   ) {
     if (this._initialized && !force) return;
 
@@ -121,8 +116,8 @@ export class Fyo {
     // temp params while calling routes
     this.temp = {};
 
-    this.doc.init();
-    this.auth.init();
+    await this.doc.init();
+    await this.auth.init();
     await this.db.init();
   }
 
@@ -164,10 +159,12 @@ export class Fyo {
 
   async close() {
     await this.db.close();
+    await this.auth.logout();
   }
 
   getField(schemaName: string, fieldname: string) {
-    return this.fieldMap[schemaName]?.[fieldname];
+    const schema = this.schemaMap[schemaName];
+    return schema?.fields.find((f) => f.fieldname === fieldname);
   }
 
   async getValue(
@@ -188,14 +185,14 @@ export class Fyo {
     let value: DocValue | Doc[];
     try {
       doc = await this.doc.getDoc(schemaName, name);
-      value = doc.get(fieldname);
+      value = doc.get(fieldname!);
     } catch (err) {
       value = undefined;
     }
 
     if (value === undefined && schemaName === name) {
       const sv = await this.db.getSingleValues({
-        fieldname: fieldname,
+        fieldname: fieldname!,
         parent: schemaName,
       });
 
@@ -220,7 +217,8 @@ export class Fyo {
     this.errorLog = [];
     this.temp = {};
     await this.db.purgeCache();
-    this.doc.purgeCache();
+    await this.auth.purgeCache();
+    await this.doc.purgeCache();
   }
 
   store = {
@@ -232,8 +230,6 @@ export class Fyo {
     instanceId: '',
     deviceId: '',
     openCount: -1,
-    appFlags: {} as Record<string, boolean>,
-    reports: {} as Record<keyof typeof reports, Report | undefined>,
   };
 }
 

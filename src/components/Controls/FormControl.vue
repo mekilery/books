@@ -8,12 +8,12 @@ import Color from './Color.vue';
 import Currency from './Currency.vue';
 import Data from './Data.vue';
 import Date from './Date.vue';
-import Datetime from './Datetime.vue';
 import DynamicLink from './DynamicLink.vue';
 import Float from './Float.vue';
 import Int from './Int.vue';
 import Link from './Link.vue';
 import Select from './Select.vue';
+import Table from './Table.vue';
 import Text from './Text.vue';
 
 const components = {
@@ -24,7 +24,7 @@ const components = {
   Select,
   Link,
   Date,
-  Datetime,
+  Table,
   AutoComplete,
   DynamicLink,
   Int,
@@ -36,23 +36,6 @@ const components = {
 
 export default {
   name: 'FormControl',
-  methods: {
-    clear() {
-      const input = this.$refs.control.$refs.input;
-      if (input instanceof HTMLInputElement) {
-        input.value = '';
-      }
-    },
-    select() {
-      this.$refs.control.$refs?.input?.select();
-    },
-    focus() {
-      this.$refs.control.focus();
-    },
-    getInput() {
-      return this.$refs.control.$refs.input;
-    },
-  },
   render() {
     const fieldtype = this.$attrs.df.fieldtype;
     const component = components[fieldtype] ?? Data;
@@ -61,6 +44,14 @@ export default {
       ...this.$attrs,
       ref: 'control',
     });
+  },
+  methods: {
+    focus() {
+      this.$refs.control.focus();
+    },
+    getInput() {
+      return this.$refs.control.$refs.input;
+    },
   },
 };
 </script>

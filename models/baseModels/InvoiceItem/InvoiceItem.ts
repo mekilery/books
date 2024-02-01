@@ -1,4 +1,4 @@
-import { Fyo, t } from 'fyo';
+import { Fyo } from 'fyo';
 import { DocValue, DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
@@ -6,39 +6,22 @@ import {
   FiltersMap,
   FormulaMap,
   HiddenMap,
-  ValidationMap,
+  ValidationMap
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
-import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
-import { Item } from '../Item/Item';
-import { StockTransfer } from 'models/inventory/StockTransfer';
-import { PriceList } from '../PriceList/PriceList';
-import { isPesa } from 'fyo/utils';
 
 export abstract class InvoiceItem extends Doc {
-  item?: string;
   account?: string;
   amount?: Money;
   parentdoc?: Invoice;
   rate?: Money;
-
-  description?: string;
-  hsnCode?: number;
-
-  unit?: string;
-  transferUnit?: string;
   quantity?: number;
-  transferQuantity?: number;
-  unitConversionFactor?: number;
-  batch?: string;
-
   tax?: string;
-  stockNotTransferred?: number;
 
   setItemDiscountAmount?: boolean;
   itemDiscountAmount?: Money;
@@ -47,22 +30,7 @@ export abstract class InvoiceItem extends Doc {
   itemTaxedTotal?: Money;
 
   get isSales() {
-    return (
-      this.schemaName === 'SalesInvoiceItem' ||
-      this.schemaName === 'SalesQuoteItem'
-    );
-  }
-
-  get date() {
-    return this.parentdoc?.date ?? undefined;
-  }
-
-  get party() {
-    return this.parentdoc?.party ?? undefined;
-  }
-
-  get priceList() {
-    return this.parentdoc?.priceList ?? undefined;
+    return this.schemaName === 'SalesInvoiceItem';
   }
 
   get discountAfterTax() {
@@ -71,10 +39,6 @@ export abstract class InvoiceItem extends Doc {
 
   get enableDiscounting() {
     return !!this.fyo.singles?.AccountingSettings?.enableDiscounting;
-  }
-
-  get enableInventory() {
-    return !!this.fyo.singles?.AccountingSettings?.enableInventory;
   }
 
   get currency() {
@@ -87,10 +51,6 @@ export abstract class InvoiceItem extends Doc {
 
   get isMultiCurrency() {
     return this.parentdoc?.isMultiCurrency ?? false;
-  }
-
-  get isReturn() {
-    return !!this.parentdoc?.isReturn;
   }
 
   constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
@@ -122,7 +82,12 @@ export abstract class InvoiceItem extends Doc {
     },
     rate: {
       formula: async (fieldname) => {
-        const rate = await getItemRate(this);
+        const rate = (await this.fyo.getValue(
+          'Item',
+          this.item as string,
+          'rate'
+        )) as undefined | Money;
+
         if (!rate?.float && this.rate?.float) {
           return this.rate;
         }
@@ -160,9 +125,6 @@ export abstract class InvoiceItem extends Doc {
         return rateFromTotals ?? rate ?? this.fyo.pesa(0);
       },
       dependsOn: [
-        'date',
-        'priceList',
-        'batch',
         'party',
         'exchangeRate',
         'item',
@@ -171,97 +133,25 @@ export abstract class InvoiceItem extends Doc {
         'setItemDiscountAmount',
       ],
     },
-    unit: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'unit'
-        )) as string,
-      dependsOn: ['item'],
-    },
-    transferUnit: {
-      formula: async (fieldname) => {
-        if (fieldname === 'quantity' || fieldname === 'unit') {
-          return this.unit;
-        }
-
-        return (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'unit'
-        )) as string;
-      },
-      dependsOn: ['item', 'unit'],
-    },
-    transferQuantity: {
-      formula: (fieldname) => {
-        if (fieldname === 'quantity' || this.unit === this.transferUnit) {
-          return this.quantity;
-        }
-
-        return this.transferQuantity;
-      },
-      dependsOn: ['item', 'quantity'],
-    },
     quantity: {
-      formula: async (fieldname) => {
+      formula: async () => {
         if (!this.item) {
           return this.quantity as number;
         }
 
         const itemDoc = await this.fyo.doc.getDoc(
           ModelNameEnum.Item,
-          this.item
+          this.item as string
         );
-        const unitDoc = itemDoc.getLink('uom');
 
-        let quantity: number = this.quantity ?? 1;
-
-        if (this.isReturn && quantity > 0) {
-          quantity *= -1;
-        }
-
-        if (!this.isReturn && quantity < 0) {
-          quantity *= -1;
-        }
-
-        if (fieldname === 'transferQuantity') {
-          quantity = this.transferQuantity! * this.unitConversionFactor!;
-        }
-
+        const unitDoc = itemDoc.getLink('unit');
         if (unitDoc?.isWhole) {
-          return Math.round(quantity);
+          return Math.round(this.quantity as number);
         }
 
-        return safeParseFloat(quantity);
+        return this.quantity as number;
       },
-      dependsOn: [
-        'quantity',
-        'transferQuantity',
-        'transferUnit',
-        'unitConversionFactor',
-        'item',
-        'isReturn',
-      ],
-    },
-    unitConversionFactor: {
-      formula: async () => {
-        if (this.unit === this.transferUnit) {
-          return 1;
-        }
-
-        const conversionFactor = await this.fyo.db.getAll(
-          ModelNameEnum.UOMConversionItem,
-          {
-            fields: ['conversionFactor'],
-            filters: { parent: this.item! },
-          }
-        );
-
-        return safeParseFloat(conversionFactor[0]?.conversionFactor ?? 1);
-      },
-      dependsOn: ['transferUnit'],
+      dependsOn: ['quantity'],
     },
     account: {
       formula: () => {
@@ -339,7 +229,7 @@ export abstract class InvoiceItem extends Doc {
       ],
     },
     itemTaxedTotal: {
-      formula: async () => {
+      formula: async (fieldname) => {
         const totalTaxRate = await this.getTotalTaxRate();
         const rate = this.rate ?? this.fyo.pesa(0);
         const quantity = this.quantity ?? 1;
@@ -370,44 +260,10 @@ export abstract class InvoiceItem extends Doc {
         'item',
       ],
     },
-    stockNotTransferred: {
-      formula: async () => {
-        if (this.parentdoc?.isSubmitted) {
-          return;
-        }
-
-        const item = (await this.loadAndGetLink('item')) as Item;
-        if (!item.trackItem) {
-          return 0;
-        }
-
-        const { backReference, stockTransferSchemaName } = this.parentdoc ?? {};
-        if (
-          !backReference ||
-          !stockTransferSchemaName ||
-          typeof this.quantity !== 'number'
-        ) {
-          return this.quantity;
-        }
-
-        const refdoc = (await this.fyo.doc.getDoc(
-          stockTransferSchemaName,
-          backReference
-        )) as StockTransfer;
-
-        const transferred =
-          refdoc.items
-            ?.filter((i) => i.item === this.item)
-            .reduce((acc, i) => i.quantity ?? 0 + acc, 0) ?? 0;
-
-        return Math.max(0, this.quantity - transferred);
-      },
-      dependsOn: ['item', 'quantity'],
-    },
   };
 
   validations: ValidationMap = {
-    rate: (value: DocValue) => {
+    rate: async (value: DocValue) => {
       if ((value as Money).gte(0)) {
         return;
       }
@@ -419,7 +275,7 @@ export abstract class InvoiceItem extends Doc {
         )}) cannot be less zero.`
       );
     },
-    itemDiscountAmount: (value: DocValue) => {
+    itemDiscountAmount: async (value: DocValue) => {
       if ((value as Money).lte(this.amount!)) {
         return;
       }
@@ -434,7 +290,7 @@ export abstract class InvoiceItem extends Doc {
         )}).`
       );
     },
-    itemDiscountPercent: (value: DocValue) => {
+    itemDiscountPercent: async (value: DocValue) => {
       if ((value as number) < 100) {
         return;
       }
@@ -444,23 +300,6 @@ export abstract class InvoiceItem extends Doc {
           value as number
         }) cannot be greater than 100.`
       );
-    },
-    transferUnit: async (value: DocValue) => {
-      if (!this.item) {
-        return;
-      }
-
-      const item = await this.fyo.db.getAll(ModelNameEnum.UOMConversionItem, {
-        fields: ['parent'],
-        filters: { uom: value as string, parent: this.item },
-      });
-
-      if (item.length < 1)
-        throw new ValidationError(
-          t`Transfer Unit ${value as string} is not applicable for Item ${
-            this.item
-          }`
-        );
     },
   };
 
@@ -485,23 +324,27 @@ export abstract class InvoiceItem extends Doc {
       !(this.enableDiscounting && !!this.setItemDiscountAmount),
     itemDiscountPercent: () =>
       !(this.enableDiscounting && !this.setItemDiscountAmount),
-    batch: () => !this.fyo.singles.InventorySettings?.enableBatches,
-    transferUnit: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
-    transferQuantity: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
-    unitConversionFactor: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
   };
 
   static filters: FiltersMap = {
     item: (doc: Doc) => {
+      const itemList = doc.parentdoc!.items as Doc[];
+      const items = itemList.map((d) => d.item as string).filter(Boolean);
+
       let itemNotFor = 'Sales';
       if (doc.isSales) {
         itemNotFor = 'Purchases';
       }
 
-      return { for: ['not in', [itemNotFor]] };
+      const baseFilter = { for: ['not in', [itemNotFor]] };
+      if (items.length <= 0) {
+        return baseFilter;
+      }
+
+      return {
+        name: ['not in', items],
+        ...baseFilter,
+      };
     },
   };
 
@@ -528,65 +371,6 @@ export abstract class InvoiceItem extends Doc {
       this.getCurrencies[fieldname] ??= this._getCurrency.bind(this);
     }
   }
-}
-
-async function getItemRate(doc: InvoiceItem): Promise<Money | undefined> {
-  let priceListRate: Money | undefined;
-  if (doc.fyo.singles.AccountingSettings?.enablePriceList) {
-    priceListRate = await getItemRateFromPriceList(doc);
-  }
-
-  if (priceListRate) {
-    return priceListRate;
-  }
-
-  if (!doc.item) {
-    return;
-  }
-
-  const itemRate = await doc.fyo.getValue(ModelNameEnum.Item, doc.item, 'rate');
-  if (isPesa(itemRate)) {
-    return itemRate;
-  }
-
-  return;
-}
-
-async function getItemRateFromPriceList(
-  doc: InvoiceItem
-): Promise<Money | undefined> {
-  const priceListName = doc.parentdoc?.priceList;
-  const item = doc.item;
-  if (!priceListName || !item) {
-    return;
-  }
-
-  const priceList = await doc.fyo.doc.getDoc(
-    ModelNameEnum.PriceList,
-    priceListName
-  );
-
-  if (!(priceList instanceof PriceList)) {
-    return;
-  }
-
-  const unit = doc.unit;
-  const transferUnit = doc.transferUnit;
-  const plItem = priceList.priceListItem?.find((pli) => {
-    if (pli.item !== item) {
-      return false;
-    }
-
-    if (transferUnit && pli.unit !== transferUnit) {
-      return false;
-    } else if (unit && pli.unit !== unit) {
-      return false;
-    }
-
-    return true;
-  });
-
-  return plItem?.rate;
 }
 
 function getDiscountedTotalBeforeTaxation(

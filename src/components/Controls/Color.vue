@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="showLabel" :class="labelClasses">
+    <div :class="labelClasses" v-if="showLabel">
       {{ df.label }}
     </div>
     <Popover placement="bottom-end">
@@ -13,13 +13,13 @@
           <div class="flex items-center">
             <div
               v-if="value"
-              class="w-3 h-3 rounded me-1"
+              class="w-3 h-3 rounded mr-1"
               :style="{ backgroundColor: value }"
             ></div>
             <span v-if="value">
               {{ selectedColorLabel }}
             </span>
-            <span v-else class="text-gray-400">
+            <span class="text-gray-400" v-else>
               {{ inputPlaceholder }}
             </span>
           </div>
@@ -28,7 +28,7 @@
       <template #content>
         <div class="text-sm p-2 text-center">
           <div>
-            <Row :column-count="5" gap="0.5rem">
+            <Row class="border-none" :column-count="5" gap="0.5rem">
               <div
                 v-for="color in colors"
                 :key="color.value"
@@ -40,11 +40,10 @@
           </div>
           <div class="mt-3 w-28">
             <input
-              type="color"
+              type="text"
               :placeholder="t`Custom Hex`"
               :class="[inputClasses, containerClasses]"
               :value="value"
-              style="padding: 0"
               @change="(e) => setColorValue(e.target.value)"
             />
           </div>
@@ -55,25 +54,16 @@
 </template>
 
 <script>
-import Popover from 'src/components/Popover.vue';
-import Row from 'src/components/Row.vue';
-import Base from './Base.vue';
+import Popover from 'src/components/Popover';
+import Row from 'src/components/Row';
+import Base from './Base';
 
 export default {
   name: 'Color',
+  extends: Base,
   components: {
     Popover,
     Row,
-  },
-  extends: Base,
-  computed: {
-    colors() {
-      return this.df.options;
-    },
-    selectedColorLabel() {
-      const color = this.colors.find((c) => this.value === c.value);
-      return color ? color.label : this.value;
-    },
   },
   methods: {
     setColorValue(value) {
@@ -83,6 +73,15 @@ export default {
       if (/^#[0-9A-F]{6}$/i.test(value)) {
         this.triggerChange(value);
       }
+    },
+  },
+  computed: {
+    colors() {
+      return this.df.options;
+    },
+    selectedColorLabel() {
+      const color = this.colors.find((c) => this.value === c.value);
+      return color ? color.label : this.value;
     },
   },
 };

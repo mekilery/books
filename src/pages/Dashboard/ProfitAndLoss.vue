@@ -5,14 +5,14 @@
       <template #action>
         <PeriodSelector
           :value="period"
-          :options="periodOptions"
+          :options="['This Year', 'This Quarter']"
           @change="(value) => (period = value)"
         />
       </template>
     </SectionHeader>
     <BarChart
-      v-if="hasData"
       class="mt-4"
+      v-if="hasData"
       :aspect-ratio="2.05"
       :colors="chartData.colors"
       :points="chartData.points"
@@ -22,50 +22,48 @@
       :y-max="chartData.yMax"
       :y-min="chartData.yMin"
     />
-    <div v-else class="flex-1 w-full h-full flex-center my-20">
+    <div class="flex-1 w-full h-full flex-center my-20" v-else>
       <span class="text-base text-gray-600">
         {{ t`No transactions yet` }}
       </span>
     </div>
   </div>
 </template>
-<script lang="ts">
+<script>
 import BarChart from 'src/components/Charts/BarChart.vue';
 import { fyo } from 'src/initFyo';
 import { formatXLabels, getYMax, getYMin } from 'src/utils/chart';
 import { uicolors } from 'src/utils/colors';
 import { getDatesAndPeriodList } from 'src/utils/misc';
 import { getValueMapFromList } from 'utils';
-import DashboardChartBase from './BaseDashboardChart.vue';
-import PeriodSelector from './PeriodSelector.vue';
-import SectionHeader from './SectionHeader.vue';
-import { defineComponent } from 'vue';
+import PeriodSelector from './PeriodSelector';
+import SectionHeader from './SectionHeader';
 
-// Linting broken in this file cause of `extends: ...`
-/* 
-  eslint-disable @typescript-eslint/no-unsafe-argument, 
-  @typescript-eslint/no-unsafe-return
-*/
-export default defineComponent({
+export default {
   name: 'ProfitAndLoss',
   components: {
     PeriodSelector,
     SectionHeader,
     BarChart,
   },
-  extends: DashboardChartBase,
   data: () => ({
-    data: [] as { yearmonth: string; balance: number }[],
+    period: 'This Year',
+    data: [],
     hasData: false,
-    periodOptions: ['This Year', 'This Quarter', 'YTD'],
   }),
+  activated() {
+    this.setData();
+  },
+  watch: {
+    period: 'setData',
+  },
   computed: {
     chartData() {
       const points = [this.data.map((d) => d.balance)];
       const colors = [
         { positive: uicolors.blue['500'], negative: uicolors.pink['500'] },
       ];
-      const format = (value: number) => fyo.format(value ?? 0, 'Currency');
+      const format = (value) => fyo.format(value ?? 0, 'Currency');
       const yMax = getYMax(points);
       const yMin = getYMin(points);
       return {
@@ -79,12 +77,9 @@ export default defineComponent({
       };
     },
   },
-  activated() {
-    this.setData();
-  },
   methods: {
     async setData() {
-      const { fromDate, toDate, periodList } = getDatesAndPeriodList(
+      const { fromDate, toDate, periodList } = await getDatesAndPeriodList(
         this.period
       );
 
@@ -108,5 +103,5 @@ export default defineComponent({
       this.hasData = data.income.length > 0 || data.expense.length > 0;
     },
   },
-});
+};
 </script>

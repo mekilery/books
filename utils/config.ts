@@ -1,5 +1,4 @@
 import Store from 'electron-store';
-import type { ConfigMap } from 'fyo/core/types';
 
-const config = new Store<ConfigMap>();
+const config = new Store();
 export default config;

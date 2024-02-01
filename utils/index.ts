@@ -1,6 +1,3 @@
-import type { Fyo } from 'fyo';
-import { Money } from 'pesa';
-
 /**
  * And so should not contain and platforma specific imports.
  */
@@ -8,8 +5,8 @@ export function getValueMapFromList<T, K extends keyof T, V extends keyof T>(
   list: T[],
   key: K,
   valueKey: V,
-  filterUndefined = true
-): Record<string, T[V]> {
+  filterUndefined: boolean = true
+): Record<string, unknown> {
   if (filterUndefined) {
     list = list.filter(
       (f) =>
@@ -23,7 +20,7 @@ export function getValueMapFromList<T, K extends keyof T, V extends keyof T>(
     const value = f[valueKey];
     acc[keyValue] = value;
     return acc;
-  }, {} as Record<string, T[V]>);
+  }, {} as Record<string, unknown>);
 }
 
 export function getRandomString(): string {
@@ -32,7 +29,7 @@ export function getRandomString(): string {
   return `${randomNumber}-${currentTime}`;
 }
 
-export async function sleep(durationMilliseconds = 1000) {
+export async function sleep(durationMilliseconds: number = 1000) {
   return new Promise((r) => setTimeout(() => r(null), durationMilliseconds));
 }
 
@@ -86,7 +83,7 @@ export function getListFromMap<T>(map: Record<string, T>): T[] {
   return Object.keys(map).map((n) => map[n]);
 }
 
-export function getIsNullOrUndef(value: unknown): value is null | undefined {
+export function getIsNullOrUndef(value: unknown): boolean {
   return value === null || value === undefined;
 }
 
@@ -115,7 +112,6 @@ export function invertMap(map: Record<string, string>): Record<string, string> {
 }
 
 export function time<K, T>(func: (...args: K[]) => T, ...args: K[]): T {
-  /* eslint-disable no-console */
   const name = func.name;
   console.time(name);
   const stuff = func(...args);
@@ -127,7 +123,6 @@ export async function timeAsync<K, T>(
   func: (...args: K[]) => Promise<T>,
   ...args: K[]
 ): Promise<T> {
-  /* eslint-disable no-console */
   const name = func.name;
   console.time(name);
   const stuff = await func(...args);
@@ -162,100 +157,3 @@ export function deleteKeys<T>(
 
   return dest;
 }
-
-function safeParseNumber(value: unknown, parser: (v: string) => number) {
-  let parsed: number;
-  switch (typeof value) {
-    case 'string':
-      parsed = parser(value);
-      break;
-    case 'number':
-      parsed = value;
-      break;
-    default:
-      parsed = Number(value);
-      break;
-  }
-
-  if (Number.isNaN(parsed)) {
-    return 0;
-  }
-
-  return parsed;
-}
-
-export function safeParseFloat(value: unknown): number {
-  return safeParseNumber(value, Number);
-}
-
-export function safeParseInt(value: unknown): number {
-  return safeParseNumber(value, (v: string) => Math.trunc(Number(v)));
-}
-
-export function safeParsePesa(value: unknown, fyo: Fyo): Money {
-  if (value instanceof Money) {
-    return value;
-  }
-
-  if (typeof value === 'number') {
-    return fyo.pesa(value);
-  }
-
-  if (typeof value === 'bigint') {
-    return fyo.pesa(value);
-  }
-
-  if (typeof value !== 'string') {
-    return fyo.pesa(0);
-  }
-
-  try {
-    return fyo.pesa(value);
-  } catch {
-    return fyo.pesa(0);
-  }
-}
-
-export function joinMapLists<A, B>(
-  listA: A[],
-  listB: B[],
-  keyA: keyof A,
-  keyB: keyof B
-): (A & B)[] {
-  const mapA = getMapFromList(listA, keyA);
-  const mapB = getMapFromList(listB, keyB);
-
-  const keyListA = listA
-    .map((i) => i[keyA])
-    .filter((k) => (k as unknown as string) in mapB);
-
-  const keyListB = listB
-    .map((i) => i[keyB])
-    .filter((k) => (k as unknown as string) in mapA);
-
-  const keys = new Set([keyListA, keyListB].flat().sort());
-
-  const joint: (A & B)[] = [];
-  for (const k of keys) {
-    const a = mapA[k as unknown as string];
-    const b = mapB[k as unknown as string];
-    const c = { ...a, ...b };
-
-    joint.push(c);
-  }
-
-  return joint;
-}
-
-export function removeAtIndex<T>(array: T[], index: number): T[] {
-  if (index < 0 || index >= array.length) {
-    return array;
-  }
-
-  return [...array.slice(0, index), ...array.slice(index + 1)];
-}
-
-/**
- * Asserts that `value` is of type T. Use with care.
- */
-export const assertIsType = <T>(value: unknown): value is T => true;

@@ -14,11 +14,9 @@ export class DocHandler {
   singles: SinglesMap = {};
   docs: Observable<DocMap | undefined> = new Observable();
   observer: Observable<never> = new Observable();
-  #temporaryNameCounters: Record<string, number>;
 
   constructor(fyo: Fyo) {
     this.fyo = fyo;
-    this.#temporaryNameCounters = {};
   }
 
   init() {
@@ -28,7 +26,7 @@ export class DocHandler {
     this.observer = new Observable();
   }
 
-  purgeCache() {
+  async purgeCache() {
     this.init();
   }
 
@@ -82,10 +80,10 @@ export class DocHandler {
   getNewDoc(
     schemaName: string,
     data: DocValueMap | RawValueMap = {},
-    cacheDoc = true,
+    cacheDoc: boolean = true,
     schema?: Schema,
     Model?: typeof Doc,
-    isRawValueMap = true
+    isRawValueMap: boolean = true
   ): Doc {
     if (!this.models[schemaName] && Model) {
       this.models[schemaName] = Model;
@@ -99,32 +97,12 @@ export class DocHandler {
     }
 
     const doc = new Model!(schema, data, this.fyo, isRawValueMap);
-    doc.name ??= this.getTemporaryName(schema);
+    doc.name ??= getRandomString();
     if (cacheDoc) {
       this.#addToCache(doc);
     }
 
     return doc;
-  }
-
-  isTemporaryName(name: string, schema: Schema): boolean {
-    const label = schema.label ?? schema.name;
-    const template = this.fyo.t`New ${label} `;
-    return name.includes(template);
-  }
-
-  getTemporaryName(schema: Schema): string {
-    if (schema.naming === 'random') {
-      return getRandomString();
-    }
-
-    this.#temporaryNameCounters[schema.name] ??= 1;
-
-    const idx = this.#temporaryNameCounters[schema.name];
-    this.#temporaryNameCounters[schema.name] = idx + 1;
-    const label = schema.label ?? schema.name;
-
-    return this.fyo.t`New ${label} ${String(idx).padStart(2, '0')}`;
   }
 
   /**
@@ -153,42 +131,39 @@ export class DocHandler {
 
     // propagate change to `docs`
     doc.on('change', (params: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.docs.trigger('change', params);
+      this.docs!.trigger('change', params);
     });
 
     doc.on('afterSync', () => {
-      if (doc.name === name && this.#cacheHas(schemaName, name)) {
+      if (doc.name === name) {
         return;
       }
 
-      this.removeFromCache(doc.schemaName, name);
+      this.#removeFromCache(doc.schemaName, name);
       this.#addToCache(doc);
     });
   }
 
   #setCacheUpdationListeners(schemaName: string) {
-    this.fyo.db.observer.on(`delete:${schemaName}`, (name) => {
-      if (typeof name !== 'string') {
-        return;
-      }
-
-      this.removeFromCache(schemaName, name);
+    this.fyo.db.observer.on(`delete:${schemaName}`, (name: string) => {
+      this.#removeFromCache(schemaName, name);
     });
 
-    this.fyo.db.observer.on(`rename:${schemaName}`, (names) => {
-      const { oldName } = names as { oldName: string };
-      const doc = this.#getFromCache(schemaName, oldName);
-      if (doc === undefined) {
-        return;
-      }
+    this.fyo.db.observer.on(
+      `rename:${schemaName}`,
+      (names: { oldName: string; newName: string }) => {
+        const doc = this.#getFromCache(schemaName, names.oldName);
+        if (doc === undefined) {
+          return;
+        }
 
-      this.removeFromCache(schemaName, oldName);
-      this.#addToCache(doc);
-    });
+        this.#removeFromCache(schemaName, names.oldName);
+        this.#addToCache(doc);
+      }
+    );
   }
 
-  removeFromCache(schemaName: string, name: string) {
+  #removeFromCache(schemaName: string, name: string) {
     const docMap = this.docs.get(schemaName);
     delete docMap?.[name];
   }
@@ -196,9 +171,5 @@ export class DocHandler {
   #getFromCache(schemaName: string, name: string): Doc | undefined {
     const docMap = this.docs.get(schemaName);
     return docMap?.[name];
-  }
-
-  #cacheHas(schemaName: string, name: string): boolean {
-    return !!this.#getFromCache(schemaName, name);
   }
 }

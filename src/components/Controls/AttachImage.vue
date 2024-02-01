@@ -1,16 +1,21 @@
 <template>
   <div
-    class="relative bg-white border flex-center overflow-hidden group"
+    class="
+      relative
+      bg-white
+      border
+      rounded-full
+      flex-center
+      overflow-hidden
+      group
+    "
     :class="{
-      rounded: size === 'form',
-      'w-20 h-20 rounded-full': size !== 'small' && size !== 'form',
-      'w-12 h-12 rounded-full': size === 'small',
+      'w-20 h-20': size !== 'small',
+      'w-12 h-12': size === 'small',
     }"
-    :title="df?.label"
-    :style="imageSizeStyle"
   >
-    <img v-if="value" :src="value" />
-    <div v-else :class="[!isReadOnly ? 'group-hover:opacity-90' : '']">
+    <img :src="value" v-if="value" />
+    <div :class="[!isReadOnly ? 'group-hover:opacity-90' : '']" v-else>
       <div
         v-if="letterPlaceholder"
         class="
@@ -45,7 +50,7 @@
       :class="[!isReadOnly ? 'group-hover:flex' : '']"
       style="background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2px)"
     >
-      <button class="bg-gray-100 p-0.5 rounded mb-1" @click="handleClick">
+      <button class="bg-gray-300 p-0.5 rounded mb-1" @click="handleClick">
         <FeatherIcon
           :name="shouldClear ? 'x' : 'upload'"
           class="w-4 h-4 text-gray-600"
@@ -55,40 +60,19 @@
   </div>
 </template>
 <script lang="ts">
-import { Field } from 'schemas/types';
 import { fyo } from 'src/initFyo';
+import { selectFile } from 'src/utils/ipcCalls';
 import { getDataURL } from 'src/utils/misc';
-import { defineComponent, PropType } from 'vue';
+import { defineComponent } from 'vue';
 import FeatherIcon from '../FeatherIcon.vue';
 import Base from './Base.vue';
 
-const mime_types: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  svg: 'image/svg+xml',
-};
-
 export default defineComponent({
   name: 'AttachImage',
-  components: { FeatherIcon },
   extends: Base,
   props: {
     letterPlaceholder: { type: String, default: '' },
     value: { type: String, default: '' },
-    df: { type: Object as PropType<Field> },
-  },
-  computed: {
-    imageSizeStyle() {
-      if (this.size === 'form') {
-        return { width: '135px', height: '135px' };
-      }
-      return {};
-    },
-    shouldClear() {
-      return !!this.value;
-    },
   },
   methods: {
     async handleClick() {
@@ -107,21 +91,29 @@ export default defineComponent({
       }
       const options = {
         title: fyo.t`Select Image`,
-        filters: [{ name: 'Image', extensions: Object.keys(mime_types) }],
+        filters: [
+          { name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+        ],
       };
 
-      const { name, success, data } = await ipc.selectFile(options);
+      const { name, success, data } = await selectFile(options);
 
       if (!success) {
         return;
       }
       const extension = name.split('.').at(-1);
-      const type = mime_types[extension];
+      const type = 'image/' + extension;
       const dataURL = await getDataURL(type, data);
 
       // @ts-ignore
       this.triggerChange(dataURL);
     },
   },
+  computed: {
+    shouldClear() {
+      return !!this.value;
+    },
+  },
+  components: { FeatherIcon },
 });
 </script>

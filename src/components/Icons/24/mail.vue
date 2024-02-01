@@ -14,9 +14,9 @@
   </svg>
 </template>
 <script>
-import Base from '../base.vue';
+import Base from '../base';
 export default {
   name: 'IconMail',
-  extends: Base,
+  extends: Base
 };
 </script>

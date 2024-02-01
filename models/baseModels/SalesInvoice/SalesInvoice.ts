@@ -12,47 +12,36 @@ export class SalesInvoice extends Invoice {
   async getPosting() {
     const exchangeRate = this.exchangeRate ?? 1;
     const posting: LedgerPosting = new LedgerPosting(this, this.fyo);
-    if (this.isReturn) {
-      await posting.credit(this.account!, this.baseGrandTotal!);
-    } else {
-      await posting.debit(this.account!, this.baseGrandTotal!);
-    }
+    await posting.debit(this.account!, this.baseGrandTotal!);
 
     for (const item of this.items!) {
-      if (this.isReturn) {
-        await posting.debit(item.account!, item.amount!.mul(exchangeRate));
-        continue;
-      }
       await posting.credit(item.account!, item.amount!.mul(exchangeRate));
     }
 
     if (this.taxes) {
-      for (const tax of this.taxes) {
-        if (this.isReturn) {
-          await posting.debit(tax.account!, tax.amount!.mul(exchangeRate));
-          continue;
-        }
+      for (const tax of this.taxes!) {
         await posting.credit(tax.account!, tax.amount!.mul(exchangeRate));
       }
     }
 
-    const discountAmount = this.getTotalDiscount();
+    const discountAmount = await this.getTotalDiscount();
     const discountAccount = this.fyo.singles.AccountingSettings
       ?.discountAccount as string | undefined;
     if (discountAccount && discountAmount.isPositive()) {
-      if (this.isReturn) {
-        await posting.credit(discountAccount, discountAmount.mul(exchangeRate));
-      } else {
-        await posting.debit(discountAccount, discountAmount.mul(exchangeRate));
-      }
+      await posting.debit(discountAccount, discountAmount.mul(exchangeRate));
     }
 
     await posting.makeRoundOffEntry();
     return posting;
   }
 
+  static getActions(fyo: Fyo): Action[] {
+    return getInvoiceActions(ModelNameEnum.SalesInvoice, fyo);
+  }
+
   static getListViewSettings(): ListViewSettings {
     return {
+      formRoute: (name) => `/edit/SalesInvoice/${name}`,
       columns: [
         'name',
         getTransactionStatusColumn(),
@@ -62,9 +51,5 @@ export class SalesInvoice extends Invoice {
         'outstandingAmount',
       ],
     };
-  }
-
-  static getActions(fyo: Fyo): Action[] {
-    return getInvoiceActions(fyo, ModelNameEnum.SalesInvoice);
   }
 }

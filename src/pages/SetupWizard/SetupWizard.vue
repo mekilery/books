@@ -1,215 +1,150 @@
 <template>
-  <FormContainer
-    :show-header="false"
-    class="justify-content items-center h-full"
+  <div
+    class="flex-1 bg-gray-25 flex justify-center items-center"
     :class="{ 'window-drag': platform !== 'Windows' }"
   >
-    <template #body>
-      <FormHeader
-        :form-title="t`Set up your organization`"
-        class="sticky top-0 bg-white border-b"
-      >
-      </FormHeader>
+    <!-- Setup Wizard Slide -->
+    <Slide
+      :primary-disabled="!valuesFilled || loading"
+      :secondary-disabled="loading"
+      @primary-clicked="submit()"
+      @secondary-clicked="$emit('setup-canceled')"
+      :class="{ 'window-no-drag': platform !== 'Windows' }"
+    >
+      <template #title>
+        {{ t`Set up your organization` }}
+      </template>
 
-      <!-- Section Container -->
-      <div v-if="hasDoc" class="overflow-auto custom-scroll">
-        <CommonFormSection
-          v-for="([name, fields], idx) in activeGroup.entries()"
-          :key="name + idx"
-          ref="section"
-          class="p-4"
-          :class="idx !== 0 && activeGroup.size > 1 ? 'border-t' : ''"
-          :show-title="activeGroup.size > 1 && name !== t`Default`"
-          :title="name"
-          :fields="fields"
-          :doc="doc"
-          :errors="errors"
-          :collapsible="false"
-          @value-change="onValueChange"
-        />
-      </div>
+      <template #content>
+        <div v-if="doc">
+          <!-- Image Section -->
+          <div class="flex items-center p-4 gap-4">
+            <FormControl
+              :df="getField('logo')"
+              :value="doc.logo"
+              :read-only="loading"
+              @change="(value) => setValue('logo', value)"
+            />
+            <div>
+              <FormControl
+                ref="companyField"
+                :df="getField('companyName')"
+                :value="doc.companyName"
+                :read-only="loading"
+                @change="(value) => setValue('companyName', value)"
+                input-class="
+                  font-semibold
+                  text-xl
+                "
+                :autofocus="true"
+              />
+              <FormControl
+                :df="getField('email')"
+                :value="doc.email"
+                :read-only="loading"
+                @change="(value) => setValue('email', value)"
+              />
+            </div>
+          </div>
 
-      <!-- Buttons Bar -->
-      <div
-        class="
-          mt-auto
-          p-4
-          flex
-          items-center
-          justify-between
-          border-t
-          flex-shrink-0
-          sticky
-          bottom-0
-          bg-white
-        "
-      >
-        <p v-if="loading" class="text-base text-gray-600">
-          {{ t`Loading instance...` }}
-        </p>
-        <Button v-if="!loading" class="w-24" @click="cancel">{{
-          t`Cancel`
-        }}</Button>
-        <Button
-          v-if="fyo.store.isDevelopment && !loading"
-          class="w-24 ml-auto mr-4"
-          :disabled="loading"
-          @click="fill"
-          >{{ t`Fill` }}</Button
-        >
-        <Button
-          type="primary"
-          class="w-24"
-          data-testid="submit-button"
-          :disabled="!areAllValuesFilled || loading"
-          @click="submit"
-          >{{ t`Submit` }}</Button
-        >
-      </div>
-    </template>
-  </FormContainer>
+          <p
+            class="-mt-6 text-sm absolute text-red-400 w-full"
+            style="left: 7.75rem"
+            v-if="emailError"
+          >
+            {{ emailError }}
+          </p>
+
+          <TwoColumnForm :doc="doc" :read-only="loading" />
+          <Button
+            v-if="fyo.store.isDevelopment"
+            class="m-4 text-sm min-w-28"
+            @click="fill"
+            >Fill</Button
+          >
+        </div>
+      </template>
+      <template #secondaryButton>{{ t`Cancel` }}</template>
+      <template #primaryButton>{{
+        loading ? t`Setting up...` : t`Submit`
+      }}</template>
+    </Slide>
+  </div>
 </template>
-<script lang="ts">
-import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
-import { Verb } from 'fyo/telemetry/types';
-import { TranslationString } from 'fyo/utils/translation';
-import { ModelNameEnum } from 'models/types';
-import { Field } from 'schemas/types';
-import Button from 'src/components/Button.vue';
-import FormContainer from 'src/components/FormContainer.vue';
-import FormHeader from 'src/components/FormHeader.vue';
-import { getErrorMessage } from 'src/utils';
-import { showDialog } from 'src/utils/interactive';
-import { getSetupWizardDoc } from 'src/utils/misc';
-import { getFieldsGroupedByTabAndSection } from 'src/utils/ui';
-import { computed, defineComponent } from 'vue';
-import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 
-export default defineComponent({
+<script>
+import Button from 'src/components/Button.vue';
+import FormControl from 'src/components/Controls/FormControl.vue';
+import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import { getErrorMessage } from 'src/utils';
+import { getSetupWizardDoc } from 'src/utils/misc';
+import { showMessageDialog } from 'src/utils/ui';
+import Slide from './Slide.vue';
+
+export default {
   name: 'SetupWizard',
-  components: {
-    Button,
-    FormContainer,
-    FormHeader,
-    CommonFormSection,
-  },
-  provide() {
-    return {
-      doc: computed(() => this.docOrNull),
-    };
-  },
   emits: ['setup-complete', 'setup-canceled'],
   data() {
     return {
-      docOrNull: null,
-      errors: {},
+      doc: null,
       loading: false,
-    } as {
-      errors: Record<string, string>;
-      docOrNull: null | Doc;
-      loading: boolean;
+      valuesFilled: false,
+      emailError: null,
     };
   },
-  computed: {
-    hasDoc(): boolean {
-      return this.docOrNull instanceof Doc;
-    },
-    doc(): Doc {
-      if (this.docOrNull instanceof Doc) {
-        return this.docOrNull;
-      }
-
-      throw new Error(`Doc is null`);
-    },
-    areAllValuesFilled(): boolean {
-      if (!this.hasDoc) {
-        return false;
-      }
-
-      const values = this.doc.schema.fields
-        .filter((f) => f.required)
-        .map((f) => this.doc[f.fieldname]);
-
-      return values.every(Boolean);
-    },
-    activeGroup(): Map<string, Field[]> {
-      if (!this.hasDoc) {
-        return new Map();
-      }
-
-      const groupedFields = getFieldsGroupedByTabAndSection(
-        this.doc.schema,
-        this.doc
-      );
-
-      return [...groupedFields.values()][0];
-    },
+  provide() {
+    return {
+      schemaName: 'SetupWizard',
+      name: 'SetupWizard',
+    };
+  },
+  components: {
+    TwoColumnForm,
+    FormControl,
+    Slide,
+    Button,
   },
   async mounted() {
-    const languageMap = TranslationString.prototype.languageMap;
-    this.docOrNull = getSetupWizardDoc(languageMap);
-    if (!this.fyo.db.isConnected) {
-      await this.fyo.db.init();
-    }
-
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.sw = this;
-    }
-    this.fyo.telemetry.log(Verb.Started, ModelNameEnum.SetupWizard);
+    this.doc = await getSetupWizardDoc();
+    this.doc.on('change', () => {
+      this.valuesFilled = this.allValuesFilled();
+    });
   },
   methods: {
     async fill() {
-      if (!this.hasDoc) {
-        return;
-      }
-
       await this.doc.set('companyName', "Lin's Things");
       await this.doc.set('email', 'lin@lthings.com');
       await this.doc.set('fullname', 'Lin Slovenly');
       await this.doc.set('bankName', 'Max Finance');
       await this.doc.set('country', 'India');
     },
-    async onValueChange(field: Field, value: DocValue) {
-      if (!this.hasDoc) {
-        return;
-      }
-
-      const { fieldname } = field;
-      delete this.errors[fieldname];
-
-      try {
-        await this.doc.set(fieldname, value);
-      } catch (err) {
-        if (!(err instanceof Error)) {
-          return;
+    getField(fieldname) {
+      return this.doc.schema?.fields.find((f) => f.fieldname === fieldname);
+    },
+    setValue(fieldname, value) {
+      this.emailError = null;
+      this.doc.set(fieldname, value).catch((e) => {
+        if (fieldname === 'email') {
+          this.emailError = getErrorMessage(e, this.doc);
         }
-
-        this.errors[fieldname] = getErrorMessage(err, this.doc);
-      }
+      });
+    },
+    allValuesFilled() {
+      const values = this.doc.schema.fields
+        .filter((f) => f.required)
+        .map((f) => this.doc[f.fieldname]);
+      return values.every(Boolean);
     },
     async submit() {
-      if (!this.hasDoc) {
-        return;
-      }
-
-      if (!this.areAllValuesFilled) {
-        return await showDialog({
-          title: this.t`Mandatory Error`,
-          detail: this.t`Please fill all values.`,
-          type: 'error',
+      if (!this.allValuesFilled()) {
+        return await showMessageDialog({
+          message: this.t`Please fill all values`,
         });
       }
 
       this.loading = true;
-      this.fyo.telemetry.log(Verb.Completed, ModelNameEnum.SetupWizard);
       this.$emit('setup-complete', this.doc.getValidDict());
     },
-    cancel() {
-      this.fyo.telemetry.log(Verb.Cancelled, ModelNameEnum.SetupWizard);
-      this.$emit('setup-canceled');
-    },
   },
-});
+};
 </script>

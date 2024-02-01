@@ -1,6 +1,6 @@
 import { Fyo } from 'fyo';
+import { ConfigKeys } from 'fyo/core/types';
 import { Noun, Telemetry, Verb } from './types';
-import { ModelNameEnum } from 'models/types';
 
 /**
  * # Telemetry
@@ -27,14 +27,9 @@ import { ModelNameEnum } from 'models/types';
  *      the app is hidden.
  */
 
-const ignoreList: string[] = [
-  ModelNameEnum.AccountingLedgerEntry,
-  ModelNameEnum.StockLedgerEntry,
-];
-
 export class TelemetryManager {
-  #url = '';
-  #token = '';
+  #url: string = '';
+  #token: string = '';
   #started = false;
   fyo: Fyo;
 
@@ -72,7 +67,6 @@ export class TelemetryManager {
 
   log(verb: Verb, noun: Noun, more?: Record<string, unknown>) {
     if (!this.#started && this.fyo.db.isConnected) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.start().then(() => this.#sendBeacon(verb, noun, more));
       return;
     }
@@ -86,11 +80,7 @@ export class TelemetryManager {
   }
 
   #sendBeacon(verb: Verb, noun: Noun, more?: Record<string, unknown>) {
-    if (
-      !this.hasCreds ||
-      this.fyo.store.skipTelemetryLogging ||
-      ignoreList.includes(noun)
-    ) {
+    if (!this.hasCreds || this.fyo.store.skipTelemetryLogging) {
       return;
     }
 
@@ -118,12 +108,16 @@ export class TelemetryManager {
     noun: Noun,
     more?: Record<string, unknown>
   ): Telemetry {
-    const countryCode = this.fyo.singles.SystemSettings?.countryCode;
+    const countryCode = this.fyo.singles.SystemSettings?.countryCode as
+      | string
+      | undefined;
+
     return {
       country: countryCode ?? '',
       language: this.fyo.store.language,
       deviceId:
-        this.fyo.store.deviceId || (this.fyo.config.get('deviceId') ?? '-'),
+        this.fyo.store.deviceId ||
+        (this.fyo.config.get(ConfigKeys.DeviceId) as string),
       instanceId: this.fyo.store.instanceId,
       version: this.fyo.store.appVersion,
       openCount: this.fyo.store.openCount,

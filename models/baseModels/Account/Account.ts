@@ -5,11 +5,8 @@ import {
   FiltersMap,
   ListViewSettings,
   RequiredMap,
-  TreeViewSettings,
-  ReadOnlyMap,
-  FormulaMap,
+  TreeViewSettings
 } from 'fyo/model/types';
-import { ModelNameEnum } from 'models/types';
 import { QueryFilter } from 'utils/db/types';
 import { AccountRootType, AccountRootTypeEnum, AccountType } from './types';
 
@@ -19,15 +16,11 @@ export class Account extends Doc {
   parentAccount?: string;
 
   get isDebit() {
-    if (this.rootType === AccountRootTypeEnum.Asset) {
-      return true;
-    }
-
-    if (this.rootType === AccountRootTypeEnum.Expense) {
-      return true;
-    }
-
-    return false;
+    const debitAccounts = [
+      AccountRootTypeEnum.Asset,
+      AccountRootTypeEnum.Expense,
+    ] as AccountRootType[];
+    return debitAccounts.includes(this.rootType!);
   }
 
   get isCredit() {
@@ -59,13 +52,16 @@ export class Account extends Doc {
       return;
     }
 
-    const account = await this.fyo.db.get('Account', this.parentAccount);
+    const account = await this.fyo.db.get(
+      'Account',
+      this.parentAccount as string
+    );
     this.accountType = account.accountType as AccountType;
   }
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'rootType', 'isGroup', 'parentAccount'],
+      columns: ['name', 'parentAccount', 'rootType'],
     };
   }
 
@@ -79,40 +75,17 @@ export class Account extends Doc {
     };
   }
 
-  formulas: FormulaMap = {
-    rootType: {
-      formula: async () => {
-        if (!this.parentAccount) {
-          return;
-        }
-
-        return await this.fyo.getValue(
-          ModelNameEnum.Account,
-          this.parentAccount,
-          'rootType'
-        );
-      },
-    },
-  };
-
   static filters: FiltersMap = {
     parentAccount: (doc: Doc) => {
       const filter: QueryFilter = {
         isGroup: true,
       };
 
-      if (doc?.rootType) {
+      if (doc.rootType) {
         filter.rootType = doc.rootType as string;
       }
 
       return filter;
     },
-  };
-
-  readOnly: ReadOnlyMap = {
-    rootType: () => this.inserted,
-    parentAccount: () => this.inserted,
-    accountType: () => !!this.accountType && this.inserted,
-    isGroup: () => this.inserted,
   };
 }

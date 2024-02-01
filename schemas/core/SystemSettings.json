@@ -36,33 +36,12 @@
         {
           "label": "Mar 23, 2022",
           "value": "MMM d, y"
-        },
-        {
-          "label": "23.03.2022",
-          "value": "dd.MM.yyyy"
         }
       ],
       "default": "MMM d, y",
       "required": true,
       "allowCustom": true,
-      "description": "Sets the app-wide date display format.",
-      "section": "Default"
-    },
-    {
-      "fieldname": "hideGetStarted",
-      "label": "Hide Get Started",
-      "fieldtype": "Check",
-      "default": false,
-      "description": "Hides the Get Started section from the sidebar. Change will be visible on restart or refreshing the app.",
-      "section": "Default"
-    },
-    {
-      "fieldname": "version",
-      "label": "Version",
-      "fieldtype": "Data",
-      "default": "0.0.0",
-      "readOnly": true,
-      "section": "Default"
+      "description": "Sets the app-wide date display format."
     },
     {
       "fieldname": "locale",
@@ -70,9 +49,7 @@
       "fieldtype": "AutoComplete",
       "default": "en-IN",
       "required": true,
-      "allowCustom": true,
-      "description": "Set the local code. This is used for number formatting.",
-      "section": "Number Display"
+      "description": "Set the local code. This is used for number formatting."
     },
     {
       "fieldname": "displayPrecision",
@@ -82,17 +59,7 @@
       "required": true,
       "minvalue": 0,
       "maxvalue": 9,
-      "description": "Sets how many digits are shown after the decimal point.",
-      "section": "Number Display"
-    },
-    {
-      "fieldname": "currency",
-      "label": "Currency",
-      "fieldtype": "AutoComplete",
-      "default": "INR",
-      "readOnly": true,
-      "required": true,
-      "section": "Number Display"
+      "description": "Sets how many digits are shown after the decimal point."
     },
     {
       "fieldname": "internalPrecision",
@@ -100,23 +67,41 @@
       "fieldtype": "Int",
       "minvalue": 0,
       "default": 11,
-      "description": "Sets the internal precision used for monetary calculations. Above 6 should be sufficient for most currencies.",
-      "hidden": true
+      "description": "Sets the internal precision used for monetary calculations. Above 6 should be sufficient for most currencies."
+    },
+    {
+      "fieldname": "hideGetStarted",
+      "label": "Hide Get Started",
+      "fieldtype": "Check",
+      "default": false,
+      "description": "Hides the Get Started section from the sidebar. Change will be visible on restart or refreshing the app."
     },
     {
       "fieldname": "countryCode",
       "label": "Country Code",
       "fieldtype": "Data",
       "default": "in",
-      "description": "Country code used to initialize regional settings.",
-      "hidden": true
+      "description": "Country code used to initialize regional settings."
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "AutoComplete",
+      "default": "INR",
+      "readOnly": true,
+      "required": true
+    },
+    {
+      "fieldname": "version",
+      "label": "Version",
+      "fieldtype": "Data",
+      "readOnly": true
     },
     {
       "fieldname": "instanceId",
       "label": "Instance Id",
       "fieldtype": "Data",
-      "readOnly": true,
-      "hidden": true
+      "readOnly": true
     }
   ],
   "quickEditFields": [

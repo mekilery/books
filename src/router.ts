@@ -1,20 +1,17 @@
+import { ModelNameEnum } from 'models/types';
 import ChartOfAccounts from 'src/pages/ChartOfAccounts.vue';
-import CommonForm from 'src/pages/CommonForm/CommonForm.vue';
 import Dashboard from 'src/pages/Dashboard/Dashboard.vue';
+import DataImport from 'src/pages/DataImport.vue';
 import GetStarted from 'src/pages/GetStarted.vue';
-import ImportWizard from 'src/pages/ImportWizard.vue';
+import InvoiceForm from 'src/pages/InvoiceForm.vue';
+import InvoicePosForm from 'src/pages/InvoicePosForm.vue';
+import JournalEntryForm from 'src/pages/JournalEntryForm.vue';
 import ListView from 'src/pages/ListView/ListView.vue';
 import PrintView from 'src/pages/PrintView/PrintView.vue';
-import ReportPrintView from 'src/pages/PrintView/ReportPrintView.vue';
 import QuickEditForm from 'src/pages/QuickEditForm.vue';
 import Report from 'src/pages/Report.vue';
 import Settings from 'src/pages/Settings/Settings.vue';
-import TemplateBuilder from 'src/pages/TemplateBuilder/TemplateBuilder.vue';
-import CustomizeForm from 'src/pages/CustomizeForm/CustomizeForm.vue';
-import POS from 'src/pages/POS/POS.vue';
-import type { HistoryState } from 'vue-router';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
-import { historyState } from './utils/refs';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -26,22 +23,50 @@ const routes: RouteRecordRaw[] = [
     component: GetStarted,
   },
   {
-    path: `/edit/:schemaName/:name`,
-    name: `CommonForm`,
+    path: '/edit/JournalEntry/:name',
+    name: 'JournalEntryForm',
     components: {
-      default: CommonForm,
+      default: JournalEntryForm,
       edit: QuickEditForm,
     },
     props: {
-      default: (route) => ({
-        schemaName: route.params.schemaName,
-        name: route.params.name,
-      }),
+      default: (route) => {
+        // for sidebar item active state
+        route.params.schemaName = 'JournalEntry';
+        return {
+          schemaName: 'JournalEntry',
+          name: route.params.name,
+        };
+      },
       edit: (route) => route.query,
     },
   },
   {
-    path: '/list/:schemaName/:pageTitle?',
+    path: '/edit/:schemaName/:name',
+    name: 'InvoiceForm',
+    components: {
+      default: InvoiceForm,
+      edit: QuickEditForm,    
+    },
+    props: {
+      default: true,      
+      edit: (route) => route.query,
+    },
+  },
+  {
+    path: '/pos/:schemaName/:name',
+    name: 'InvoicePosForm',
+    components: {
+      default: InvoicePosForm,
+      edit: QuickEditForm,      
+    },
+    props: {
+      default: true,
+      edit: (route) => route.query,
+    },
+  },
+  {
+    path: '/list/:schemaName/:fieldname?/:value?/:pageTitle?',
     name: 'ListView',
     components: {
       default: ListView,
@@ -49,34 +74,29 @@ const routes: RouteRecordRaw[] = [
     },
     props: {
       default: (route) => {
-        const { schemaName } = route.params;
-        const pageTitle = route.params.pageTitle ?? '';
+        const { schemaName, fieldname, value, pageTitle } = route.params;
+        let { filters } = route.params;
 
-        const filters = {};
-        const filterString = route.query.filters;
-        if (typeof filterString === 'string') {
-          Object.assign(filters, JSON.parse(filterString));
+        if (filters === undefined && fieldname && value) {
+          // @ts-ignore
+          filters = { [fieldname as string]: value };
         }
 
         return {
           schemaName,
           filters,
-          pageTitle,
+          pageTitle: pageTitle ?? '',
         };
       },
-      edit: (route) => route.query,
+      edit: (route) => {
+        return route.query;
+      },
     },
   },
   {
     path: '/print/:schemaName/:name',
     name: 'PrintView',
     component: PrintView,
-    props: true,
-  },
-  {
-    path: '/report-print/:reportName',
-    name: 'ReportPrintView',
-    component: ReportPrintView,
     props: true,
   },
   {
@@ -98,20 +118,9 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/import-wizard',
-    name: 'Import Wizard',
-    component: ImportWizard,
-  },
-  {
-    path: '/template-builder/:name',
-    name: 'Template Builder',
-    component: TemplateBuilder,
-    props: true,
-  },
-  {
-    path: '/customize-form',
-    name: 'Customize Form',
-    component: CustomizeForm,
+    path: '/data-import',
+    name: 'Data Import',
+    component: DataImport,
   },
   {
     path: '/settings',
@@ -125,32 +134,22 @@ const routes: RouteRecordRaw[] = [
       edit: (route) => route.query,
     },
   },
-  {
-    path: '/pos',
-    name: 'Point of Sale',
-    components: {
-      default: POS,
-      edit: QuickEditForm,
-    },
-    props: {
-      default: true,
-      edit: (route) => route.query,
-    },
-  },
 ];
 
-const router = createRouter({ routes, history: createWebHistory() });
-
-router.afterEach(({ fullPath }) => {
-  const state = history.state as HistoryState;
-  historyState.forward = !!state.forward;
-  historyState.back = !!state.back;
-
-  if (fullPath.includes('index.html')) {
-    return;
+export function getEntryRoute(schemaName: string, name: string) {
+  if (
+    [
+      ModelNameEnum.SalesInvoice,
+      ModelNameEnum.PurchaseInvoice,
+      ModelNameEnum.JournalEntry,
+    ].includes(schemaName as ModelNameEnum)
+  ) {
+    return `/edit/${schemaName}/${name}`;
   }
 
-  localStorage.setItem('lastRoute', fullPath);
-});
+  return `/list/${schemaName}?edit=1&schemaName=${schemaName}&name=${name}`;
+}
+
+const router = createRouter({ routes, history: createWebHistory() });
 
 export default router;

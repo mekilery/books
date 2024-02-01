@@ -1,18 +1,17 @@
 <template>
   <div>
-    <div v-if="showLabel" :class="labelClasses">
+    <div :class="labelClasses" v-if="showLabel">
       {{ df.label }}
     </div>
     <div :class="showMandatory ? 'show-mandatory' : ''">
       <textarea
         ref="input"
-        :rows="rows"
+        rows="3"
         :class="['resize-none', inputClasses, containerClasses]"
         :value="value"
         :placeholder="inputPlaceholder"
         style="vertical-align: top"
         :readonly="isReadOnly"
-        :tabindex="isReadOnly ? '-1' : '0'"
         @blur="(e) => triggerChange(e.target.value)"
         @focus="(e) => $emit('focus', e)"
         @input="(e) => $emit('input', e)"
@@ -27,7 +26,6 @@ import Base from './Base.vue';
 export default {
   name: 'Text',
   extends: Base,
-  props: { rows: { type: Number, default: 3 } },
   emits: ['focus', 'input'],
 };
 </script>

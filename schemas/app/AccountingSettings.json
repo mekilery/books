@@ -6,120 +6,80 @@
   "isSubmittable": false,
   "fields": [
     {
-      "label": "Full Name",
-      "fieldname": "fullname",
-      "fieldtype": "Data",
-      "required": true,
-      "section": "Default"
-    },
-    {
       "label": "Company Name",
       "fieldname": "companyName",
       "fieldtype": "Data",
       "readOnly": true,
-      "required": true,
-      "section": "Default"
-    },
-    {
-      "label": "Bank Name",
-      "fieldname": "bankName",
-      "fieldtype": "Data",
-      "readOnly": true,
-      "required": true,
-      "section": "Default"
-    },
-    {
-      "label": "Country",
-      "fieldname": "country",
-      "fieldtype": "AutoComplete",
-      "placeholder": "Select Country",
-      "readOnly": true,
-      "required": true,
-      "section": "Default"
-    },
-    {
-      "fieldname": "email",
-      "label": "Email",
-      "fieldtype": "Data",
-      "required": true,
-      "section": "Default"
+      "required": true
     },
     {
       "label": "Write Off Account",
       "fieldname": "writeOffAccount",
       "fieldtype": "Link",
-      "target": "Account",
-      "section": "Accounts"
+      "target": "Account"
     },
     {
       "label": "Round Off Account",
       "fieldname": "roundOffAccount",
       "fieldtype": "Link",
-      "target": "Account",
-      "section": "Accounts"
+      "target": "Account"
     },
     {
-      "label": "Discount Account",
-      "fieldname": "discountAccount",
-      "fieldtype": "Link",
-      "target": "Account",
-      "section": "Accounts"
+      "fieldname": "country",
+      "label": "Country",
+      "fieldtype": "AutoComplete",
+      "placeholder": "Select Country",
+      "readOnly": true,
+      "required": true
     },
     {
-      "fieldname": "enableDiscounting",
-      "label": "Enable Discount Accounting",
-      "fieldtype": "Check",
-      "default": false,
-      "section": "Features"
+      "fieldname": "fullname",
+      "label": "Full Name",
+      "fieldtype": "Data",
+      "required": true
     },
     {
-      "fieldname": "enableInventory",
-      "label": "Enable Inventory",
-      "fieldtype": "Check",
-      "default": false,
-      "section": "Features"
+      "fieldname": "email",
+      "label": "Email",
+      "fieldtype": "Data",
+      "required": true
     },
     {
-      "fieldname": "enablePriceList",
-      "label": "Enable Price List",
-      "fieldtype": "Check",
-      "default": false,
-      "section": "Features"
-    },
-    {
-      "fieldname": "enableInvoiceReturns",
-      "label": "Enable Invoice Returns",
-      "fieldtype": "Check",
-      "default": false,
-      "section": "Features"
-    },
-    {
-      "fieldname": "enableFormCustomization",
-      "label": "Enable Form Customization",
-      "fieldtype": "Check",
-      "default": false,
-      "section": "Features"
+      "fieldname": "bankName",
+      "label": "Bank Name",
+      "fieldtype": "Data",
+      "readOnly": true,
+      "required": true
     },
     {
       "fieldname": "fiscalYearStart",
       "label": "Fiscal Year Start Date",
       "fieldtype": "Date",
-      "required": true,
-      "section": "Fiscal Year"
+      "required": true
     },
     {
       "fieldname": "fiscalYearEnd",
       "label": "Fiscal Year End Date",
       "fieldtype": "Date",
-      "required": true,
-      "section": "Fiscal Year"
+      "required": true
+    },
+    {
+      "fieldname": "enableDiscounting",
+      "label": "Enable Discount Accounting",
+      "fieldtype": "Check",
+      "default": false
+    },
+    {
+      "label": "Discount Account",
+      "fieldname": "discountAccount",
+      "fieldtype": "Link",
+      "target": "Account"
     },
     {
       "fieldname": "setupComplete",
       "label": "Setup Complete",
       "fieldtype": "Check",
-      "default": false,
-      "hidden": true
+      "default": false
     }
   ],
   "quickEditFields": [

@@ -1,15 +1,8 @@
 {
   "name": "Address",
   "label": "Address",
-  "naming": "manual",
   "isSingle": false,
   "fields": [
-    {
-      "fieldname": "name",
-      "label": "Address Name",
-      "fieldtype": "Data",
-      "required": true
-    },
     {
       "fieldname": "addressLine1",
       "label": "Address Line 1",
@@ -31,19 +24,19 @@
       "required": true
     },
     {
+      "fieldname": "state",
+      "label": "State",
+      "placeholder": "State",
+      "options": [],
+      "fieldtype": "AutoComplete"
+    },
+    {
       "fieldname": "country",
       "label": "Country",
       "placeholder": "Country",
       "fieldtype": "AutoComplete",
       "options": [],
       "required": true
-    },
-    {
-      "fieldname": "state",
-      "label": "State",
-      "placeholder": "State",
-      "options": [],
-      "fieldtype": "AutoComplete"
     },
     {
       "fieldname": "postalCode",
@@ -55,37 +48,33 @@
       "fieldname": "emailAddress",
       "label": "Email Address",
       "placeholder": "Email Address",
-      "fieldtype": "Data",
-      "section": "Contacts"
+      "fieldtype": "Data"
     },
     {
       "fieldname": "phone",
       "label": "Phone",
       "placeholder": "Phone",
-      "fieldtype": "Data",
-      "section": "Contacts"
+      "fieldtype": "Data"
     },
     {
       "fieldname": "fax",
       "label": "Fax",
-      "fieldtype": "Data",
-      "section": "Contacts"
+      "fieldtype": "Data"
     },
     {
       "fieldname": "addressDisplay",
       "fieldtype": "Text",
       "label": "Address Display",
-      "readOnly": true,
-      "section": "Miscellaneous"
+      "readOnly": true
     }
   ],
   "quickEditFields": [
     "addressLine1",
     "addressLine2",
     "city",
-    "country",
     "state",
+    "country",
     "postalCode"
   ],
-  "linkDisplayField": "addressDisplay"
+  "inlineEditDisplayField": "addressDisplay"
 }

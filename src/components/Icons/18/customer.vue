@@ -9,8 +9,8 @@
   </svg>
 </template>
 <script>
-import Base from '../base.vue';
+import Base from '../base';
 export default {
-  extends: Base,
+  extends: Base
 };
 </script>

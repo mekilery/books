@@ -1,14 +1,13 @@
 import { Fyo } from 'fyo';
-import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
-import { Action } from 'fyo/model/types';
+import { Action, DocStatus } from 'fyo/model/types';
 import { Money } from 'pesa';
-import { Field, FieldType, OptionField, SelectOption } from 'schemas/types';
-import { getIsNullOrUndef, safeParseInt } from 'utils';
+import { Field, OptionField, SelectOption } from 'schemas/types';
+import { getIsNullOrUndef } from 'utils';
 
 export function slug(str: string) {
   return str
-    .replace(/(?:^\w|[A-Z]|\b\w)/g, (letter, index) => {
+    .replace(/(?:^\w|[A-Z]|\b\w)/g, function (letter, index) {
       return index == 0 ? letter.toLowerCase() : letter.toUpperCase();
     })
     .replace(/\s+/g, '');
@@ -24,8 +23,8 @@ export function unique<T>(list: T[], key = (it: T) => String(it)) {
 
 export function getDuplicates(array: unknown[]) {
   const duplicates: unknown[] = [];
-  for (let i = 0; i < array.length; i++) {
-    const previous = array[safeParseInt(i) - 1];
+  for (const i in array) {
+    const previous = array[parseInt(i) - 1];
     const current = array[i];
 
     if (current === previous) {
@@ -37,28 +36,8 @@ export function getDuplicates(array: unknown[]) {
   return duplicates;
 }
 
-export function isPesa(value: unknown): value is Money {
+export function isPesa(value: unknown): boolean {
   return value instanceof Money;
-}
-
-export function isFalsy(value: unknown): boolean {
-  if (!value) {
-    return true;
-  }
-
-  if (isPesa(value) && value.isZero()) {
-    return true;
-  }
-
-  if (Array.isArray(value) && value.length === 0) {
-    return true;
-  }
-
-  if (typeof value === 'object' && Object.keys(value).length === 0) {
-    return true;
-  }
-
-  return false;
 }
 
 export function getActions(doc: Doc): Action[] {
@@ -118,7 +97,7 @@ function getRawOptionList(field: Field, doc: Doc | undefined | null) {
     return [];
   }
 
-  const Model = doc.fyo.models[doc.schemaName];
+  const Model = doc!.fyo.models[doc!.schemaName];
   if (Model === undefined) {
     return [];
   }
@@ -128,36 +107,5 @@ function getRawOptionList(field: Field, doc: Doc | undefined | null) {
     return [];
   }
 
-  return getList(doc);
-}
-
-export function getEmptyValuesByFieldTypes(
-  fieldtype: FieldType,
-  fyo: Fyo
-): DocValue {
-  switch (fieldtype) {
-    case 'Date':
-    case 'Datetime':
-      return new Date();
-    case 'Float':
-    case 'Int':
-      return 0;
-    case 'Currency':
-      return fyo.pesa(0);
-    case 'Check':
-      return false;
-    case 'DynamicLink':
-    case 'Link':
-    case 'Select':
-    case 'AutoComplete':
-    case 'Text':
-    case 'Data':
-    case 'Color':
-      return null;
-    case 'Table':
-    case 'Attachment':
-    case 'AttachImage':
-    default:
-      return null;
-  }
+  return getList(doc!);
 }

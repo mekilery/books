@@ -8,20 +8,18 @@
     {
       "fieldname": "logo",
       "label": "Company Logo",
-      "fieldtype": "AttachImage",
-      "section": "Default"
+      "fieldtype": "AttachImage"
     },
     {
-      "fieldname": "companyName",
-      "label": "Company Name",
-      "placeholder": "Company Name",
-      "fieldtype": "Data",
-      "required": true,
-      "section": "Default"
+      "fieldname": "country",
+      "label": "Country",
+      "fieldtype": "AutoComplete",
+      "placeholder": "Select Country",
+      "required": true
     },
     {
       "fieldname": "fullname",
-      "label": "Full Name",
+      "label": "Your Name",
       "fieldtype": "Data",
       "placeholder": "John Doe",
       "required": true
@@ -34,19 +32,10 @@
       "required": true
     },
     {
-      "fieldname": "country",
-      "label": "Country",
-      "fieldtype": "AutoComplete",
-      "placeholder": "Select Country",
-      "section": "Locale",
-      "required": true
-    },
-    {
-      "fieldname": "currency",
-      "label": "Currency",
-      "fieldtype": "AutoComplete",
-      "placeholder": "Currency",
-      "section": "Locale",
+      "fieldname": "companyName",
+      "label": "Company Name",
+      "placeholder": "Company Name",
+      "fieldtype": "Data",
       "required": true
     },
     {
@@ -54,15 +43,6 @@
       "label": "Bank Name",
       "fieldtype": "Data",
       "placeholder": "Prime Bank",
-      "section": "Accounting",
-      "required": true
-    },
-    {
-      "fieldname": "chartOfAccounts",
-      "label": "Chart of Accounts",
-      "fieldtype": "AutoComplete",
-      "placeholder": "Select CoA",
-      "section": "Accounting",
       "required": true
     },
     {
@@ -70,7 +50,6 @@
       "label": "Fiscal Year Start Date",
       "placeholder": "Fiscal Year Start Date",
       "fieldtype": "Date",
-      "section": "Accounting",
       "required": true
     },
     {
@@ -78,14 +57,26 @@
       "label": "Fiscal Year End Date",
       "placeholder": "Fiscal Year End Date",
       "fieldtype": "Date",
-      "section": "Accounting",
+      "required": true
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Data",
+      "placeholder": "Currency",
+      "required": true
+    },
+    {
+      "fieldname": "chartOfAccounts",
+      "label": "Chart of Accounts",
+      "fieldtype": "AutoComplete",
+      "placeholder": "Select CoA",
       "required": true
     },
     {
       "fieldname": "completed",
       "label": "Completed",
       "fieldtype": "Check",
-      "hidden": true,
       "readOnly": true
     }
   ],

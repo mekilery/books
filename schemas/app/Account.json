@@ -2,7 +2,6 @@
   "name": "Account",
   "label": "Account",
   "naming": "manual",
-  "create": false,
   "isSingle": false,
   "isTree": true,
   "fields": [
@@ -132,11 +131,23 @@
       ]
     },
     {
+      "fieldname": "balance",
+      "label": "Balance",
+      "fieldtype": "Currency",
+      "readOnly": true
+    },
+    {
       "fieldname": "isGroup",
       "label": "Is Group",
       "fieldtype": "Check",
       "default": false
     }
   ],
-  "quickEditFields": ["rootType", "parentAccount", "accountType", "isGroup"]
+  "quickEditFields": [
+    "rootType",
+    "parentAccount",
+    "accountType",
+    "isGroup",
+    "balance"
+  ]
 }

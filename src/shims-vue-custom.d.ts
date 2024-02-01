@@ -5,6 +5,6 @@ declare module 'vue' {
   interface ComponentCustomProperties {
     t: (...args: TranslationLiteral[]) => string;
     fyo: Fyo;
-    platform: 'Windows' | 'Linux' | 'Mac';
+    platform: string;
   }
 }

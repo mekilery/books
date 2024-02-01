@@ -6,36 +6,63 @@
     {
       "fieldname": "logo",
       "label": "Logo",
-      "fieldtype": "AttachImage",
-      "section": "Default"
+      "fieldtype": "AttachImage"
     },
     {
       "fieldname": "companyName",
       "label": "Company Name",
-      "fieldtype": "Data",
-      "section": "Default"
+      "fieldtype": "Data"
     },
     {
       "fieldname": "email",
       "label": "Email",
       "fieldtype": "Data",
-      "placeholder": "john@doe.com",
-      "section": "Contacts"
+      "placeholder": "john@doe.com"
+    },
+    {
+      "fieldname": "displayLogo",
+      "label": "Display Logo in Invoice",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "displayTaxInvoice",
+      "label": "Display Tax Invoice",
+      "fieldtype": "Check"
     },
     {
       "fieldname": "phone",
       "label": "Phone",
       "fieldtype": "Data",
-      "placeholder": "9888900000",
-      "section": "Contacts"
+      "placeholder": "9888900000"
     },
     {
       "fieldname": "address",
       "label": "Address",
       "fieldtype": "Link",
       "target": "Address",
-      "create": true,
-      "section": "Contacts"
+      "placeholder": "Click to create",
+      "inline": true
+    },
+    {
+      "fieldname": "template",
+      "label": "Template",
+      "placeholder": "Template",
+      "fieldtype": "Select",
+      "options": [
+        {
+          "value": "Basic",
+          "label": "Basic"
+        },
+        {
+          "value": "Minimal",
+          "label": "Minimal"
+        },
+        {
+          "value": "Business",
+          "label": "Business"
+        }
+      ],
+      "default": "Basic"
     },
     {
       "fieldname": "color",
@@ -84,8 +111,7 @@
           "label": "Black",
           "value": "#112B42"
         }
-      ],
-      "section": "Customizations"
+      ]
     },
     {
       "fieldname": "font",
@@ -106,14 +132,18 @@
           "label": "Courier"
         }
       ],
-      "default": "Arial",
-      "section": "Customizations"
-    },
-    {
-      "fieldname": "displayLogo",
-      "label": "Display Logo in Invoice",
-      "fieldtype": "Check",
-      "section": "Customizations"
+      "default": "Arial"
     }
+  ],
+  "quickEditFields": [
+    "logo",
+    "displayLogo",
+    "displayTaxInvoice",
+    "template",
+    "color",
+    "font",
+    "email",
+    "phone",
+    "address"
   ]
 }

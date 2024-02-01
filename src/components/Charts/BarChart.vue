@@ -37,9 +37,9 @@
       <!-- x Labels -->
       <template v-if="xLabels.length > 0">
         <text
+          :style="fontStyle"
           v-for="(i, j) in count"
           :key="j + '-xlabels'"
-          :style="fontStyle"
           :y="
             viewBoxHeight -
             axisPadding +
@@ -57,9 +57,9 @@
       <!-- y Labels -->
       <template v-if="yLabelDivisions > 0">
         <text
+          :style="fontStyle"
           v-for="(i, j) in yLabelDivisions + 1"
           :key="j + '-ylabels'"
-          :style="fontStyle"
           :y="yScalerLocation(i - 1)"
           :x="axisPadding - xLabelOffset + left"
           text-anchor="end"
@@ -92,10 +92,10 @@
         :width="width"
         :height="rec.height"
         :fill="rec.color"
-        clip-path="url(#positive-rect-clip)"
         @mouseenter="() => create(rec.xi, rec.yi)"
         @mousemove="update"
         @mouseleave="destroy"
+        clip-path="url(#positive-rect-clip)"
       />
 
       <rect
@@ -108,17 +108,17 @@
         :width="width"
         :height="rec.height"
         :fill="rec.color"
-        clip-path="url(#negative-rect-clip)"
         @mouseenter="() => create(rec.xi, rec.yi)"
         @mousemove="update"
         @mouseleave="destroy"
+        clip-path="url(#negative-rect-clip)"
       />
     </svg>
     <Tooltip
       ref="tooltip"
       :offset="15"
       placement="top"
-      class="text-sm shadow-md px-2 py-1 bg-white text-gray-900 border-s-4"
+      class="text-sm shadow-md px-2 py-1 bg-white text-gray-900 border-l-4"
       :style="{ borderColor: activeColor }"
     >
       <div class="flex flex-col justify-center items-center">
@@ -137,7 +137,6 @@ import { prefixFormat } from 'src/utils/chart';
 import Tooltip from '../Tooltip.vue';
 
 export default {
-  components: { Tooltip },
   props: {
     skipXLabel: { type: Number, default: 2 },
     colors: { type: Array, default: () => [] },
@@ -172,9 +171,6 @@ export default {
     tooltipDispDistThreshold: { type: Number, default: 20 },
     drawZeroLine: { type: Boolean, default: true },
   },
-  data() {
-    return { xi: -1, yi: -1, activeColor: 'rgba(0, 0, 0, 0.2)' };
-  },
   computed: {
     fontStyle() {
       return { fontSize: this.fontSize, fill: this.fontColor };
@@ -196,7 +192,7 @@ export default {
             this.padding +
             this.left +
             (i * (this.viewBoxWidth - this.left - 2 * this.padding)) /
-              (this.count - 1 || 1) // The "or" one (1) prevents accidentally dividing by 0
+              (this.count - 1)
         );
     },
     z() {
@@ -266,6 +262,9 @@ export default {
       }
       return hMax;
     },
+  },
+  data() {
+    return { xi: -1, yi: -1, activeColor: 'rgba(0, 0, 0, 0.2)' };
   },
   methods: {
     gradY(i) {
@@ -352,6 +351,7 @@ export default {
       this.$refs.tooltip.destroy();
     },
   },
+  components: { Tooltip },
 };
 </script>
 

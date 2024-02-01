@@ -1,7 +1,6 @@
 import { t } from 'fyo';
-import { routeFilters } from 'src/utils/filters';
 import { fyo } from '../initFyo';
-import { SidebarConfig, SidebarItem, SidebarRoot } from './types';
+import { SidebarConfig, SidebarRoot } from './types';
 
 export function getSidebarConfig(): SidebarConfig {
   const sideBar = getCompleteSidebar();
@@ -54,98 +53,6 @@ function getRegionalSidebar(): SidebarRoot[] {
   ];
 }
 
-function getInventorySidebar(): SidebarRoot[] {
-  const hasInventory = !!fyo.singles.AccountingSettings?.enableInventory;
-  if (!hasInventory) {
-    return [];
-  }
-
-  return [
-    {
-      label: t`Inventory`,
-      name: 'inventory',
-      icon: 'inventory',
-      iconSize: '18',
-      route: '/list/StockMovement',
-      items: [
-        {
-          label: t`Stock Movement`,
-          name: 'stock-movement',
-          route: '/list/StockMovement',
-          schemaName: 'StockMovement',
-        },
-        {
-          label: t`Shipment`,
-          name: 'shipment',
-          route: '/list/Shipment',
-          schemaName: 'Shipment',
-        },
-        {
-          label: t`Purchase Receipt`,
-          name: 'purchase-receipt',
-          route: '/list/PurchaseReceipt',
-          schemaName: 'PurchaseReceipt',
-        },
-        {
-          label: t`Stock Ledger`,
-          name: 'stock-ledger',
-          route: '/report/StockLedger',
-        },
-        {
-          label: t`Stock Balance`,
-          name: 'stock-balance',
-          route: '/report/StockBalance',
-        },
-      ],
-    },
-  ];
-}
-
-function getPOSSidebar() {
-  const isPOSEnabled = !!fyo.singles.InventorySettings?.enablePointOfSale;
-  if (!isPOSEnabled) {
-    return [];
-  }
-
-  return {
-    label: t`POS`,
-    name: 'pos',
-    route: '/pos',
-    icon: 'pos',
-  };
-}
-
-function getReportSidebar() {
-  return {
-    label: t`Reports`,
-    name: 'reports',
-    icon: 'reports',
-    route: '/report/GeneralLedger',
-    items: [
-      {
-        label: t`General Ledger`,
-        name: 'general-ledger',
-        route: '/report/GeneralLedger',
-      },
-      {
-        label: t`Profit And Loss`,
-        name: 'profit-and-loss',
-        route: '/report/ProfitAndLoss',
-      },
-      {
-        label: t`Balance Sheet`,
-        name: 'balance-sheet',
-        route: '/report/BalanceSheet',
-      },
-      {
-        label: t`Trial Balance`,
-        name: 'trial-balance',
-        route: '/report/TrialBalance',
-      },
-    ],
-  };
-}
-
 function getCompleteSidebar(): SidebarConfig {
   return [
     {
@@ -154,8 +61,8 @@ function getCompleteSidebar(): SidebarConfig {
       route: '/get-started',
       icon: 'general',
       iconSize: '24',
-      iconHeight: 5,
-      hidden: () => !!fyo.singles.SystemSettings?.hideGetStarted,
+      iconHeight: '5',
+      hidden: () => fyo.singles.SystemSettings!.hideGetStarted as boolean,
     },
     {
       label: t`Dashboard`,
@@ -170,12 +77,6 @@ function getCompleteSidebar(): SidebarConfig {
       route: '/list/SalesInvoice',
       items: [
         {
-          label: t`Sales Quotes`,
-          name: 'sales-quotes',
-          route: '/list/SalesQuote',
-          schemaName: 'SalesQuote',
-        },
-        {
           label: t`Sales Invoices`,
           name: 'sales-invoices',
           route: '/list/SalesInvoice',
@@ -184,25 +85,22 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Sales Payments`,
           name: 'payments',
-          route: `/list/Payment/${t`Sales Payments`}`,
+          route: `/list/Payment/paymentType/Receive/${t`Sales Payments`}`,
           schemaName: 'Payment',
-          filters: routeFilters.SalesPayments,
         },
         {
           label: t`Customers`,
           name: 'customers',
-          route: `/list/Party/${t`Customers`}`,
+          route: `/list/Party/role/Customer/${t`Customers`}`,
           schemaName: 'Party',
-          filters: routeFilters.Customers,
         },
         {
           label: t`Sales Items`,
           name: 'sales-items',
-          route: `/list/Item/${t`Sales Items`}`,
+          route: `/list/Item/for/Sales/${t`Sales Items`}`,
           schemaName: 'Item',
-          filters: routeFilters.SalesItems,
         },
-      ] as SidebarItem[],
+      ],
     },
     {
       label: t`Purchases`,
@@ -219,25 +117,22 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Purchase Payments`,
           name: 'payments',
-          route: `/list/Payment/${t`Purchase Payments`}`,
+          route: `/list/Payment/paymentType/Pay/${t`Purchase Payments`}`,
           schemaName: 'Payment',
-          filters: routeFilters.PurchasePayments,
         },
         {
           label: t`Suppliers`,
           name: 'suppliers',
-          route: `/list/Party/${t`Suppliers`}`,
+          route: `/list/Party/role/Supplier/${t`Suppliers`}`,
           schemaName: 'Party',
-          filters: routeFilters.Suppliers,
         },
         {
           label: t`Purchase Items`,
           name: 'purchase-items',
-          route: `/list/Item/${t`Purchase Items`}`,
+          route: `/list/Item/for/Purchases/${t`Purchase Items`}`,
           schemaName: 'Item',
-          filters: routeFilters.PurchaseItems,
         },
-      ] as SidebarItem[],
+      ],
     },
     {
       label: t`Common`,
@@ -254,30 +149,46 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Party`,
           name: 'party',
-          route: '/list/Party',
+          route: '/list/Party/role/Both',
           schemaName: 'Party',
-          filters: { role: 'Both' },
         },
         {
-          label: t`Items`,
+          label: t`Common Items`,
           name: 'common-items',
-          route: `/list/Item/${t`Items`}`,
+          route: `/list/Item/for/Both/${t`Common Items`}`,
           schemaName: 'Item',
-          filters: { for: 'Both' },
+        },
+      ],
+    },
+    {
+      label: t`Reports`,
+      name: 'reports',
+      icon: 'reports',
+      route: '/report/GeneralLedger',
+      items: [
+        {
+          label: t`General Ledger`,
+          name: 'general-ledger',
+          route: '/report/GeneralLedger',
         },
         {
-          label: t`Price List`,
-          name: 'price-list',
-          route: '/list/PriceList',
-          schemaName: 'PriceList',
-          hidden: () => !fyo.singles.AccountingSettings?.enablePriceList,
+          label: t`Profit And Loss`,
+          name: 'profit-and-loss',
+          route: '/report/ProfitAndLoss',
         },
-      ] as SidebarItem[],
+        {
+          label: t`Balance Sheet`,
+          name: 'balance-sheet',
+          route: '/report/BalanceSheet',
+        },
+        {
+          label: t`Trial Balance`,
+          name: 'trial-balance',
+          route: '/report/TrialBalance',
+        },
+      ],
     },
-    getReportSidebar(),
-    getInventorySidebar(),
-    getPOSSidebar(),
-    getRegionalSidebar(),
+    ...getRegionalSidebar(),
     {
       label: t`Setup`,
       name: 'setup',
@@ -290,35 +201,22 @@ function getCompleteSidebar(): SidebarConfig {
           route: '/chart-of-accounts',
         },
         {
-          label: t`Tax Templates`,
+          label: t`Taxes`,
           name: 'taxes',
           route: '/list/Tax',
           schemaName: 'Tax',
         },
         {
-          label: t`Import Wizard`,
-          name: 'import-wizard',
-          route: '/import-wizard',
-        },
-        {
-          label: t`Print Templates`,
-          name: 'print-template',
-          route: `/list/PrintTemplate/${t`Print Templates`}`,
-        },
-        {
-          label: t`Customize Form`,
-          name: 'customize-form',
-          // route: `/customize-form`,
-          route: `/list/CustomForm/${t`Customize Form`}`,
-          hidden: () =>
-            !fyo.singles.AccountingSettings?.enableFormCustomization,
+          label: t`Data Import`,
+          name: 'data-import',
+          route: '/data-import',
         },
         {
           label: t`Settings`,
           name: 'settings',
           route: '/settings',
         },
-      ] as SidebarItem[],
+      ],
     },
-  ].flat();
+  ];
 }

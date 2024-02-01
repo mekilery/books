@@ -1,19 +1,8 @@
-import { RawCustomField } from 'backend/database/types';
 import { cloneDeep } from 'lodash';
 import { getListFromMap, getMapFromList } from 'utils';
 import regionalSchemas from './regional';
 import { appSchemas, coreSchemas, metaSchemas } from './schemas';
-import type {
-  DynamicLinkField,
-  Field,
-  OptionField,
-  Schema,
-  SchemaMap,
-  SchemaStub,
-  SchemaStubMap,
-  SelectOption,
-  TargetField,
-} from './types';
+import { Field, Schema, SchemaMap, SchemaStub, SchemaStubMap } from './types';
 
 const NAME_FIELD = {
   fieldname: 'name',
@@ -23,10 +12,7 @@ const NAME_FIELD = {
   readOnly: true,
 };
 
-export function getSchemas(
-  countryCode = '-',
-  rawCustomFields: RawCustomField[]
-): Readonly<SchemaMap> {
+export function getSchemas(countryCode: string = '-'): Readonly<SchemaMap> {
   const builtCoreSchemas = getCoreSchemas();
   const builtAppSchemas = getAppSchemas(countryCode);
 
@@ -35,7 +21,6 @@ export function getSchemas(
   schemaMap = removeFields(schemaMap);
   schemaMap = setSchemaNameOnFields(schemaMap);
 
-  addCustomFields(schemaMap, rawCustomFields);
   deepFreeze(schemaMap);
   return schemaMap;
 }
@@ -65,8 +50,8 @@ function removeFields(schemaMap: SchemaMap): SchemaMap {
         (fn) => fn !== fieldname
       );
 
-      if (schema.linkDisplayField === fieldname) {
-        delete schema.linkDisplayField;
+      if (schema.inlineEditDisplayField === fieldname) {
+        delete schema.inlineEditDisplayField;
       }
     }
 
@@ -142,7 +127,7 @@ function addNameField(schemaMap: SchemaMap) {
       continue;
     }
 
-    schema.fields.unshift(NAME_FIELD as Field);
+    schema.fields.push(NAME_FIELD as Field);
   }
 }
 
@@ -224,14 +209,14 @@ export function getAbstractCombinedSchemas(schemas: SchemaStubMap): SchemaMap {
 
   for (const name of extendingSchemaNames) {
     const extendingSchema = schemas[name] as Schema;
-    const abstractSchema = schemas[extendingSchema.extends!];
+    const abstractSchema = schemas[extendingSchema.extends!] as SchemaStub;
 
     schemaMap[name] = getCombined(extendingSchema, abstractSchema) as Schema;
   }
 
-  abstractSchemaNames.forEach((name) => {
+  for (const name in abstractSchemaNames) {
     delete schemaMap[name];
-  });
+  }
 
   return schemaMap;
 }
@@ -265,96 +250,4 @@ function getRegionalSchemaMap(countryCode: string): SchemaStubMap {
   }
 
   return getMapFromList(countrySchemas, 'name');
-}
-
-function addCustomFields(
-  schemaMap: SchemaMap,
-  rawCustomFields: RawCustomField[]
-): void {
-  const fieldMap = getFieldMapFromRawCustomFields(rawCustomFields, schemaMap);
-  for (const schemaName in fieldMap) {
-    const fields = fieldMap[schemaName];
-    schemaMap[schemaName]?.fields.push(...fields);
-  }
-}
-
-function getFieldMapFromRawCustomFields(
-  rawCustomFields: RawCustomField[],
-  schemaMap: SchemaMap
-) {
-  const schemaFieldMap: Record<string, Record<string, Field>> = {};
-
-  return rawCustomFields.reduce(
-    (
-      map,
-      {
-        parent,
-        label,
-        fieldname,
-        fieldtype,
-        isRequired,
-        section,
-        tab,
-        options: rawOptions,
-        default: defaultValue,
-        target,
-        references,
-      }
-    ) => {
-      schemaFieldMap[parent] ??= getMapFromList(
-        schemaMap[parent]?.fields ?? [],
-        'fieldname'
-      );
-
-      if (!schemaFieldMap[parent] || schemaFieldMap[parent][fieldname]) {
-        return map;
-      }
-
-      map[parent] ??= [];
-      const options = rawOptions
-        ?.split('\n')
-        .map((o) => {
-          const value = o.trim();
-          return { value, label: value } as SelectOption;
-        })
-        .filter((o) => o.label && o.value);
-
-      const field = {
-        label,
-        fieldname,
-        fieldtype,
-        section,
-        tab,
-        isCustom: true,
-      } as Field;
-
-      if (options?.length) {
-        (field as OptionField).options = options;
-      }
-
-      if (typeof isRequired === 'number' || typeof isRequired === 'boolean') {
-        field.required = Boolean(isRequired);
-      }
-
-      if (typeof target === 'string') {
-        (field as TargetField).target = target;
-      }
-
-      if (typeof references === 'string') {
-        (field as DynamicLinkField).references = references;
-      }
-
-      if (field.required && defaultValue != null) {
-        field.default = defaultValue;
-      }
-
-      if (field.required && field.default == null) {
-        field.required = false;
-      }
-
-      map[parent].push(field);
-      return map;
-    },
-    {} as Record<string, Field[]>
-  );
 }

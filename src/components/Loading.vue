@@ -1,13 +1,12 @@
 <template>
   <div
-    v-if="open && !close"
-    class="absolute bottom-0 flex justify-end pb-6 pe-6"
+    class="absolute bottom-0 flex justify-end pb-6 pr-6"
     :style="{ width: fullWidth ? '100%' : 'calc(100% - 12rem)' }"
+    v-if="open && !close"
   >
     <!-- Loading Continer -->
     <div
       class="
-        border
         text-gray-900
         shadow-lg
         px-3
@@ -20,7 +19,7 @@
       "
     >
       <!-- Message -->
-      <p v-if="message?.length" class="text-base text-gray-600 pb-2">
+      <p class="text-base text-gray-600 pb-2" v-if="message?.length">
         {{ message }}
       </p>
 
@@ -28,13 +27,13 @@
       <div class="w-full flex flex-row items-center">
         <!-- Loading Bar BG -->
         <div
-          class="w-full h-3 me-2 rounded"
+          class="w-full h-3 mr-2 rounded"
           :class="percent >= 0 ? 'bg-gray-200' : 'bg-gray-300'"
         >
           <!-- Loading Bar -->
           <div
             v-if="percent >= 0"
-            class="h-3 rounded bg-gray-800"
+            class="h-3 rounded bg-blue-400"
             :style="{ width: `${percent * 100}%` }"
           ></div>
         </div>
@@ -46,7 +45,7 @@
           class="
             w-4
             h-4
-            ms-auto
+            ml-auto
             text-gray-600
             cursor-pointer
             hover:text-gray-800

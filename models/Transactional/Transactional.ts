@@ -26,56 +26,28 @@ export abstract class Transactional extends Doc {
     return true;
   }
 
-  abstract getPosting(): Promise<LedgerPosting | null>;
+  abstract getPosting(): Promise<LedgerPosting>;
 
   async validate() {
     await super.validate();
-    if (!this.isTransactional) {
-      return;
-    }
-
     const posting = await this.getPosting();
-    if (posting === null) {
-      return;
-    }
-
     posting.validate();
   }
 
   async afterSubmit(): Promise<void> {
     await super.afterSubmit();
-    if (!this.isTransactional) {
-      return;
-    }
-
     const posting = await this.getPosting();
-    if (posting === null) {
-      return;
-    }
-
     await posting.post();
   }
 
   async afterCancel(): Promise<void> {
     await super.afterCancel();
-    if (!this.isTransactional) {
-      return;
-    }
-
     const posting = await this.getPosting();
-    if (posting === null) {
-      return;
-    }
-
     await posting.postReverse();
   }
 
   async afterDelete(): Promise<void> {
     await super.afterDelete();
-    if (!this.isTransactional) {
-      return;
-    }
-
     const ledgerEntryIds = (await this.fyo.db.getAll(
       ModelNameEnum.AccountingLedgerEntry,
       {

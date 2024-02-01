@@ -10,13 +10,15 @@ import {
   HiddenMap,
   ListViewSettings,
   RequiredMap,
-  ValidationMap,
+  ValidationMap
 } from 'fyo/model/types';
 import { NotFoundError, ValidationError } from 'fyo/utils/errors';
 import {
-  getDocStatusListColumn,
+  getDocStatus,
   getLedgerLinkAction,
   getNumberSeries,
+  getStatusMap,
+  statusColor
 } from 'models/helpers';
 import { LedgerPosting } from 'models/Transactional/LedgerPosting';
 import { Transactional } from 'models/Transactional/Transactional';
@@ -28,17 +30,14 @@ import { Invoice } from '../Invoice/Invoice';
 import { Party } from '../Party/Party';
 import { PaymentFor } from '../PaymentFor/PaymentFor';
 import { PaymentMethod, PaymentType } from './types';
-import { TaxSummary } from '../TaxSummary/TaxSummary';
 
 type AccountTypeMap = Record<AccountTypeEnum, string[] | undefined>;
 
 export class Payment extends Transactional {
-  taxes?: TaxSummary[];
   party?: string;
   amount?: Money;
   writeoff?: Money;
   paymentType?: PaymentType;
-  referenceType?: ModelNameEnum.SalesInvoice | ModelNameEnum.PurchaseInvoice;
   for?: PaymentFor[];
   _accountsMap?: AccountTypeMap;
 
@@ -87,7 +86,9 @@ export class Payment extends Transactional {
   updateAmountOnReferenceUpdate() {
     this.amount = this.fyo.pesa(0);
     for (const paymentReference of (this.for ?? []) as Doc[]) {
-      this.amount = this.amount.add(paymentReference.amount as Money);
+      this.amount = (this.amount as Money).add(
+        paymentReference.amount as Money
+      );
     }
   }
 
@@ -124,9 +125,8 @@ export class Payment extends Transactional {
 
       if (referenceName && referenceType && !refDoc) {
         throw new ValidationError(
-          t`${referenceType} of type ${
-            this.fyo.schemaMap?.[referenceType]?.label ?? referenceType
-          } does not exist`
+          t`${referenceType} of type ${this.fyo.schemaMap?.[referenceType]
+            ?.label!} does not exist`
         );
       }
 
@@ -223,86 +223,6 @@ export class Payment extends Transactional {
     );
   }
 
-  async getTaxSummary() {
-    const taxes: Record<
-      string,
-      Record<
-        string,
-        {
-          account: string;
-          from_account: string;
-          rate: number;
-          amount: Money;
-        }
-      >
-    > = {};
-
-    for (const childDoc of this.for ?? []) {
-      const referenceName = childDoc.referenceName;
-      const referenceType = childDoc.referenceType;
-
-      const refDoc = (await this.fyo.doc.getDoc(
-        childDoc.referenceType!,
-        childDoc.referenceName
-      )) as Invoice;
-
-      if (referenceName && referenceType && !refDoc) {
-        throw new ValidationError(
-          t`${referenceType} of type ${
-            this.fyo.schemaMap?.[referenceType]?.label ?? referenceType
-          } does not exist`
-        );
-      }
-
-      if (!refDoc) {
-        continue;
-      }
-
-      for (const {
-        details,
-        taxAmount,
-        exchangeRate,
-      } of await refDoc.getTaxItems()) {
-        const { account, payment_account } = details;
-        if (!payment_account) {
-          continue;
-        }
-
-        taxes[payment_account] ??= {};
-        taxes[payment_account][account] ??= {
-          account: payment_account,
-          from_account: account,
-          rate: details.rate,
-          amount: this.fyo.pesa(0),
-        };
-
-        taxes[payment_account][account].amount = taxes[payment_account][
-          account
-        ].amount.add(taxAmount.mul(exchangeRate ?? 1));
-      }
-    }
-
-    type Summary = typeof taxes[string][string] & { idx: number };
-    const taxArr: Summary[] = [];
-    let idx = 0;
-    for (const payment_account in taxes) {
-      for (const account in taxes[payment_account]) {
-        const tax = taxes[payment_account][account];
-        if (tax.amount.isZero()) {
-          continue;
-        }
-
-        taxArr.push({
-          ...tax,
-          idx,
-        });
-        idx += 1;
-      }
-    }
-
-    return taxArr;
-  }
-
   async getPosting() {
     /**
      * account        : From Account
@@ -323,22 +243,8 @@ export class Payment extends Transactional {
     const account = this.account as string;
     const amount = this.amount as Money;
 
-    await posting.debit(paymentAccount, amount);
-    await posting.credit(account, amount);
-
-    if (this.taxes) {
-      if (this.paymentType === 'Receive') {
-        for (const tax of this.taxes) {
-          await posting.debit(tax.from_account!, tax.amount!);
-          await posting.credit(tax.account!, tax.amount!);
-        }
-      } else if (this.paymentType === 'Pay') {
-        for (const tax of this.taxes) {
-          await posting.credit(tax.from_account!, tax.amount!);
-          await posting.debit(tax.account!, tax.amount!);
-        }
-      }
-    }
+    await posting.debit(paymentAccount as string, amount);
+    await posting.credit(account as string, amount);
 
     await this.applyWriteOffPosting(posting);
     return posting;
@@ -365,7 +271,7 @@ export class Payment extends Transactional {
   }
 
   async validateReferences() {
-    const forReferences = this.for ?? [];
+    const forReferences = (this.for ?? []) as PaymentFor[];
     if (forReferences.length === 0) {
       return;
     }
@@ -397,7 +303,7 @@ export class Payment extends Transactional {
       )) as Invoice;
 
       outstandingAmount = outstandingAmount.add(
-        referenceDoc.outstandingAmount?.abs() ?? 0
+        referenceDoc.outstandingAmount ?? 0
       );
     }
 
@@ -430,10 +336,10 @@ export class Payment extends Transactional {
   }
 
   async updateReferenceDocOutstanding() {
-    for (const row of this.for ?? []) {
+    for (const row of (this.for ?? []) as PaymentFor[]) {
       const referenceDoc = await this.fyo.doc.getDoc(
         row.referenceType!,
-        row.referenceName
+        row.referenceName!
       );
 
       const previousOutstandingAmount = referenceDoc.outstandingAmount as Money;
@@ -444,7 +350,7 @@ export class Payment extends Transactional {
 
   async afterCancel() {
     await super.afterCancel();
-    await this.revertOutstandingAmount();
+    this.revertOutstandingAmount();
   }
 
   async revertOutstandingAmount() {
@@ -453,10 +359,10 @@ export class Payment extends Transactional {
   }
 
   async _revertReferenceOutstanding() {
-    for (const ref of this.for ?? []) {
+    for (const ref of (this.for ?? []) as PaymentFor[]) {
       const refDoc = await this.fyo.doc.getDoc(
         ref.referenceType!,
-        ref.referenceName
+        ref.referenceName!
       );
 
       const outstandingAmount = (refDoc.outstandingAmount as Money).add(
@@ -470,14 +376,14 @@ export class Payment extends Transactional {
   async updatePartyOutstanding() {
     const partyDoc = (await this.fyo.doc.getDoc(
       ModelNameEnum.Party,
-      this.party
+      this.party!
     )) as Party;
     await partyDoc.updateOutstandingAmount();
   }
 
   static defaults: DefaultMap = {
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
-    date: () => new Date(),
+    date: () => new Date().toISOString(),
   };
 
   async _getAccountsMap(): Promise<AccountTypeMap> {
@@ -535,16 +441,7 @@ export class Payment extends Transactional {
       'referenceName'
     )) as Invoice | null;
 
-    if (
-      refDoc &&
-      refDoc.schema.name === ModelNameEnum.SalesInvoice &&
-      refDoc.isReturned
-    ) {
-      const accountsMap = await this._getAccountsMap();
-      return accountsMap[AccountTypeEnum.Cash]?.[0];
-    }
-
-    return refDoc?.account ?? null;
+    return (refDoc?.account ?? null) as string | null;
   }
 
   formulas: FormulaMap = {
@@ -601,21 +498,13 @@ export class Payment extends Transactional {
         }
 
         const partyDoc = (await this.loadAndGetLink('party')) as Party;
-        const outstanding = partyDoc.outstandingAmount as Money;
-
-        if (outstanding.isNegative()) {
-          if (this.referenceType === ModelNameEnum.SalesInvoice) {
-            return 'Pay';
-          }
-          return 'Receive';
-        }
-
         if (partyDoc.role === 'Supplier') {
           return 'Pay';
         } else if (partyDoc.role === 'Customer') {
           return 'Receive';
         }
 
+        const outstanding = partyDoc.outstandingAmount as Money;
         if (outstanding?.isZero() ?? true) {
           return this.paymentType;
         }
@@ -627,26 +516,17 @@ export class Payment extends Transactional {
       },
     },
     amount: {
-      formula: () => this.getSum('for', 'amount', false),
+      formula: async () => this.getSum('for', 'amount', false),
       dependsOn: ['for'],
     },
     amountPaid: {
-      formula: () => this.amount!.sub(this.writeoff!),
+      formula: async () => this.amount!.sub(this.writeoff!),
       dependsOn: ['amount', 'writeoff', 'for'],
     },
-    referenceType: {
-      formula: () => {
-        if (this.referenceType) {
-          return;
-        }
-        return this.for![0].referenceType;
-      },
-    },
-    taxes: { formula: async () => await this.getTaxSummary() },
   };
 
   validations: ValidationMap = {
-    amount: (value: DocValue) => {
+    amount: async (value: DocValue) => {
       if ((value as Money).isNegative()) {
         throw new ValidationError(
           this.fyo.t`Payment amount cannot be less than zero.`
@@ -657,7 +537,7 @@ export class Payment extends Transactional {
         return;
       }
 
-      const amount = (this.getSum('for', 'amount', false) as Money).abs();
+      const amount = this.getSum('for', 'amount', false);
 
       if ((value as Money).gt(amount)) {
         throw new ValidationError(
@@ -685,7 +565,6 @@ export class Payment extends Transactional {
     attachment: () =>
       !(this.attachment || !(this.isSubmitted || this.isCancelled)),
     for: () => !!((this.isSubmitted || this.isCancelled) && !this.for?.length),
-    taxes: () => !this.taxes?.length,
   };
 
   static filters: FiltersMap = {
@@ -738,9 +617,29 @@ export class Payment extends Transactional {
     return [getLedgerLinkAction(fyo)];
   }
 
-  static getListViewSettings(): ListViewSettings {
+  static getListViewSettings(fyo: Fyo): ListViewSettings {
     return {
-      columns: ['name', getDocStatusListColumn(), 'party', 'date', 'amount'],
+      columns: [
+        'name',
+        {
+          label: t`Status`,
+          fieldname: 'status',
+          fieldtype: 'Select',
+          size: 'small',
+          render(doc) {
+            const status = getDocStatus(doc);
+            const color = statusColor[status] ?? 'gray';
+            const label = getStatusMap()[status];
+
+            return {
+              template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
+            };
+          },
+        },
+        'party',
+        'date',
+        'amount',
+      ],
     };
   }
 }

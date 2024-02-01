@@ -1,17 +1,21 @@
 <template>
   <button
-    class="rounded-md flex justify-center items-center text-sm"
-    :disabled="disabled"
+    class="
+      focus:outline-none
+      rounded-md
+      flex
+      justify-center
+      items-center
+      text-sm
+    "
     :class="_class"
     v-bind="$attrs"
   >
     <slot></slot>
   </button>
 </template>
-<script lang="ts">
-import { defineComponent } from 'vue';
-
-export default defineComponent({
+<script>
+export default {
   name: 'Button',
   props: {
     type: {
@@ -40,7 +44,7 @@ export default defineComponent({
       return {
         'opacity-50 cursor-not-allowed pointer-events-none': this.disabled,
         'text-white': this.type === 'primary',
-        'bg-black': this.type === 'primary' && this.background,
+        'bg-blue-500': this.type === 'primary' && this.background,
         'text-gray-700': this.type !== 'primary',
         'bg-gray-200': this.type !== 'primary' && this.background,
         'h-8': this.background,
@@ -49,7 +53,7 @@ export default defineComponent({
       };
     },
   },
-});
+};
 </script>
 <style scoped>
 button:focus {
